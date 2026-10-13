@@ -1,5 +1,12 @@
 ---
-import { wires, topRow, bottomRow } from './wiring';
+import { topRow, bottomRow, type Wire } from './wiring';
+
+interface Props {
+  wires: Wire[];
+  resistor: string;
+  id: string;
+}
+const { wires, resistor, id } = Astro.props;
 
 // Layout (SVG user units)
 const W = 940;
@@ -25,8 +32,8 @@ const btn = { d9: 640, gnd: 680, x: 580 };
 
 <figure class="wiring">
   <div class="scroll">
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="wiring-title">
-      <title id="wiring-title">Схема подключения MSQC6412C и кнопки к Arduino Uno</title>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`wiring-title-${id}`}>
+      <title id={`wiring-title-${id}`}>Схема подключения MSQC6412C и кнопки к Arduino Uno</title>
 
       {/* Wires */}
       {
@@ -38,16 +45,17 @@ const btn = { d9: 640, gnd: 680, x: 580 };
               stroke={w.color}
               stroke-width="3"
               stroke-linejoin="round"
+              stroke-dasharray={w.optional ? '7 5' : undefined}
             />
             <circle cx={w.x} cy={w.from} r="4" fill={w.color} />
             {w.kind === 'segment' ? (
               <g>
                 <rect x={RES_X} y={w.lane - 7} width={RES_W} height="14" rx="3" class="resistor" />
-                <text x={RES_X + RES_W / 2} y={w.lane - 11} class="res-label">1 кОм</text>
+                <text x={RES_X + RES_W / 2} y={w.lane - 11} class="res-label">{resistor}</text>
               </g>
             ) : null}
             <text x={ARD_X - 10} y={w.lane - 6} class="wire-label" style={`fill:${w.color}`}>
-              {w.signal}
+              {w.optional ? `${w.signal} (необяз.)` : w.signal}
             </text>
           </g>
         ))
@@ -103,7 +111,7 @@ const btn = { d9: 640, gnd: 680, x: 580 };
   </div>
   <figcaption>
     Вид на индикатор спереди, точками вниз. Номера ножек как на корпусе: сверху 12–8, снизу 1–7.
-    Сегменты (a–g, dp) идут через резисторы 1 кОм, разряды (DIG1–DIG4) напрямую.
+    Сегменты (a–g, dp) идут через резисторы {resistor}, разряды (DIG1–DIG4) напрямую.
   </figcaption>
 </figure>
 

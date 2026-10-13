@@ -1,0 +1,100 @@
+---
+import { Code } from 'astro:components';
+import WiringDiagram from './WiringDiagram.astro';
+import type { Variant } from './wiring';
+
+interface Props {
+  variant: Variant;
+  sketch: string;
+}
+const { variant, sketch } = Astro.props;
+const rows = [...variant.wires].sort((a, b) => a.pin - b.pin);
+const base = '/projects/stopwatch/';
+---
+
+<section class="variant" id={variant.id}>
+  <h2>{variant.title}</h2>
+  <p>{variant.summary}</p>
+  <slot />
+
+  <h3>Схема</h3>
+  <WiringDiagram wires={variant.wires} resistor={variant.resistor} id={variant.id} />
+
+  <h3>Таблица подключения</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Ножка</th><th>Сигнал</th><th>Arduino</th><th>Через</th><th>Цвет провода</th></tr>
+      </thead>
+      <tbody>
+        {
+          rows.map((w) => (
+            <tr>
+              <td><b>{w.pin}</b></td>
+              <td>{w.kind === 'digit' ? `разряд ${w.signal}` : `сегмент ${w.signal}`}</td>
+              <td><code>{w.arduino}</code></td>
+              <td>
+                {w.kind === 'segment' ? `резистор ${variant.resistor}` : 'напрямую'}
+                {w.optional ? ' · необязательно' : ''}
+              </td>
+              <td><span class="swatch" style={`background:${w.color}`} /> {w.colorName}</td>
+            </tr>
+          ))
+        }
+        <tr>
+          <td>—</td><td>кнопка</td><td><code>D9</code></td><td>второй вывод кнопки на <code>GND</code></td>
+          <td><span class="swatch" style="background:#16a34a" /> зелёный / чёрный</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Код для Arduino IDE</h3>
+  <p>
+    Сохрани как <code>{variant.sketchDir}/{variant.sketchFile}</code>: Arduino IDE требует, чтобы папка называлась так же, как скетч.
+  </p>
+  <div class="code-actions">
+    <a class="btn" href={base + variant.sketchFile} download>Скачать {variant.sketchFile}</a>
+    <button class="btn btn-ghost" type="button" data-copy={sketch}>Копировать код</button>
+    <a class="btn btn-ghost" href={base + variant.diagramFile} download>Схема для Wokwi ({variant.diagramFile})</a>
+  </div>
+  <div class="code">
+    <Code code={sketch} lang="cpp" themes={{ light: 'github-light', dark: 'github-dark' }} defaultColor={false} />
+  </div>
+</section>
+
+<style>
+  .variant { border-top: 1px solid var(--border); margin-top: 48px; }
+  .variant h2 { margin-top: 32px; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+  .code-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .btn {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--accent);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .btn-ghost { background: transparent; color: var(--fg); border-color: var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); }
+  .code :global(pre) {
+    padding: 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.55;
+    background-color: var(--code-bg) !important;
+  }
+  .code :global(.astro-code span) { color: var(--shiki-light); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .code :global(.astro-code span) { color: var(--shiki-dark); }
+  }
+  :root[data-theme='dark'] .code :global(.astro-code span) { color: var(--shiki-dark); }
+</style>

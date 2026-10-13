@@ -1,16 +1,16 @@
 ---
-import { Code } from 'astro:components';
 import Base from '../../layouts/Base.astro';
-import WiringDiagram from '../../projects/stopwatch/WiringDiagram.astro';
-import { wires } from '../../projects/stopwatch/wiring';
-import sketch from '../../../public/projects/stopwatch/stopwatch.ino?raw';
+import VariantSection from '../../projects/stopwatch/VariantSection.astro';
+import { variants } from '../../projects/stopwatch/wiring';
+import sketchV1 from '../../../public/projects/stopwatch/stopwatch.ino?raw';
+import sketchV2 from '../../../public/projects/stopwatch/stopwatch_v2.ino?raw';
 
-const tableRows = [...wires].sort((a, b) => a.pin - b.pin);
+const sketches: Record<string, string> = { v1: sketchV1, v2: sketchV2 };
 ---
 
 <Base
   title="Секундомер на Arduino и MSQC6412C"
-  description="Секундомер 0–60 с на Arduino Uno и 4-разрядном индикаторе MSQC6412C: схема подключения, код для Arduino IDE, симуляция в Wokwi."
+  description="Секундомер 0–60 с на Arduino Uno и 4-разрядном индикаторе MSQC6412C: два варианта подключения, схемы, код для Arduino IDE, симуляция в Wokwi."
 >
   <article>
     <a class="back" href="/">← Все проекты</a>
@@ -28,11 +28,19 @@ const tableRows = [...wires].sort((a, b) => a.pin - b.pin);
       Пока идёт счёт, точка мигает раз в секунду. На 60 счёт останавливается сам.
     </p>
 
+    <nav class="variants-nav" aria-label="Варианты подключения">
+      <p>Есть два варианта подключения. Логика программы одна и та же, отличаются только пины Arduino:</p>
+      <ul>
+        {variants.map((v) => <li><a href={`#${v.id}`}>{v.title}</a>: {v.summary}</li>)}
+      </ul>
+      <p>Собирай по одному варианту целиком: код должен соответствовать тому, как стоят провода.</p>
+    </nav>
+
     <h2>Что понадобится</h2>
     <ul>
       <li>Arduino Uno (подойдёт и Nano, пины те же)</li>
-      <li>Индикатор MSQC6412C: 4 цифры, общий анод, 12 ножек</li>
-      <li>8 резисторов 1 кОм, по одному на каждый сегмент (a–g и точка)</li>
+      <li>Индикатор MSQC6412C или аналог: 4 цифры, общий анод, 12 ножек</li>
+      <li>8 резисторов, по одному на каждый сегмент (a–g и точка): 1 кОм для варианта 1, 240–360 Ом для варианта 2</li>
       <li>Тактовая кнопка</li>
       <li>Макетная плата и провода папа-папа</li>
     </ul>
@@ -51,60 +59,31 @@ e     d     dp    c     g     DIG4  b
       соединены вместе (8 ножек), и у каждой цифры есть своя общая ножка анода DIG1–DIG4 (ещё 4).
     </p>
 
-    <h2>Схема подключения</h2>
-    <WiringDiagram />
-
-    <h3>Таблица</h3>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Ножка</th><th>Сигнал</th><th>Arduino</th><th>Через</th><th>Цвет провода</th></tr>
-        </thead>
-        <tbody>
-          {
-            tableRows.map((w) => (
-              <tr>
-                <td><b>{w.pin}</b></td>
-                <td>{w.kind === 'digit' ? `разряд ${w.signal}` : `сегмент ${w.signal}`}</td>
-                <td><code>{w.arduino}</code></td>
-                <td>{w.kind === 'segment' ? 'резистор 1 кОм' : 'напрямую'}</td>
-                <td><span class="swatch" style={`background:${w.color}`} /> {w.colorName}</td>
-              </tr>
-            ))
-          }
-          <tr>
-            <td>—</td><td>кнопка</td><td><code>D9</code></td><td>второй вывод кнопки на <code>GND</code></td>
-            <td><span class="swatch" style="background:#16a34a" /> зелёный / чёрный</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h2>Сборка по шагам</h2>
+    <h2>Сборка</h2>
     <ol class="steps">
       <li>Вставь индикатор в макетку поперёк центральной канавки, точками вниз.</li>
-      <li>От каждой ножки сегмента (11, 7, 4, 2, 1, 10, 5, 3) поставь резистор 1 кОм. Второй конец резистора соедини проводом с пином Arduino по таблице.</li>
-      <li>Ножки разрядов (12, 9, 8, 6) соедини с <code>D5</code>, <code>D4</code>, <code>D3</code>, <code>D2</code> напрямую, без резисторов.</li>
+      <li>От каждой ножки сегмента (11, 7, 4, 2, 1, 10, 5, 3) поставь резистор. Второй конец резистора соедини проводом с пином Arduino по таблице своего варианта.</li>
+      <li>Ножки разрядов (12, 9, 8, 6) соедини с Arduino напрямую, без резисторов.</li>
       <li>Кнопку поставь поперёк канавки: одну ногу на <code>D9</code>, диагонально противоположную на <code>GND</code>. Подтяжка к питанию внутренняя (<code>INPUT_PULLUP</code>), отдельный резистор не нужен.</li>
-      <li>Подключи Arduino по USB, открой скетч в Arduino IDE, выбери плату <b>Arduino Uno</b> и порт, нажми «Загрузить».</li>
+      <li>Подключи Arduino по USB, открой скетч своего варианта в Arduino IDE, выбери плату <b>Arduino Uno</b> и порт, нажми «Загрузить».</li>
     </ol>
     <p class="note">
       Без резисторов на сегментах ток ничем не ограничен: можно сжечь индикатор или пины Arduino.
-      С 1 кОм индикатор светится немного тускловато, зато безопасно.
     </p>
 
-    <h2>Код для Arduino IDE</h2>
-    <p>
-      Сохрани файл как <code>stopwatch/stopwatch.ino</code>: Arduino IDE требует, чтобы папка называлась так же, как скетч.
-      Библиотеки не нужны.
-    </p>
-    <div class="code-actions">
-      <a class="btn" href="/projects/stopwatch/stopwatch.ino" download>Скачать stopwatch.ino</a>
-      <button class="btn btn-ghost" type="button" data-copy={sketch}>Копировать код</button>
-    </div>
-    <div class="code">
-      <Code code={sketch} lang="cpp" themes={{ light: 'github-light', dark: 'github-dark' }} defaultColor={false} />
-    </div>
+    {
+      variants.map((v) => (
+        <VariantSection variant={v} sketch={sketches[v.id]}>
+          {v.id === 'v2' && (
+            <p class="note">
+              На схеме Прил_2 нарисован 5641AS (общий катод), но на практике индикатор оказался с общим анодом:
+              с <code>COMMON_CATHODE = true</code> ничего не горело. Поэтому в коде стоит <code>false</code>.
+              Встроенный светодиод «L» на плате висит на <code>D13</code>, поэтому во время работы он слегка мерцает, это нормально.
+            </p>
+          )}
+        </VariantSection>
+      ))
+    }
 
     <h2>Как это работает</h2>
     <p>
@@ -130,10 +109,9 @@ e     d     dp    c     g     DIG4  b
     <h2>Симуляция в Wokwi</h2>
     <p>
       Схему можно проверить без железа. Создай проект Arduino Uno на <a href="https://wokwi.com" rel="noopener">wokwi.com</a>,
-      вставь код во вкладку <code>sketch.ino</code>, а содержимое файла ниже во вкладку <code>diagram.json</code>.
-      Там индикатор, кнопка и все провода уже разложены на макетке, цвета проводов те же, что в таблице.
+      вставь код своего варианта во вкладку <code>sketch.ino</code>, а содержимое его файла <code>diagram</code> во вкладку
+      <code>diagram.json</code>. Индикатор, кнопка и провода уже разложены на макетке, цвета проводов те же, что в таблицах.
     </p>
-    <a class="btn btn-ghost" href="/projects/stopwatch/diagram.json" download>Скачать diagram.json</a>
     <p class="note">
       Стандартный индикатор в Wokwi нарисован с ножками 7 + 7: ножка b у него сверху, плюс две лишние ножки для
       двоеточия. Электрически это тот же индикатор, а на настоящей макетке подключай по номерам ножек.
@@ -142,11 +120,11 @@ e     d     dp    c     g     DIG4  b
     <h2>Если что-то не так</h2>
     <dl class="faq">
       <dt>Ничего не горит</dt>
-      <dd>Скорее всего, индикатор с общим катодом. Поставь <code>COMMON_CATHODE = true</code>. Проверь, что скетч загрузился, а ножки плотно сидят в макетке.</dd>
+      <dd>Скорее всего, тип индикатора не совпадает с кодом. Поменяй <code>COMMON_CATHODE</code> на противоположное значение. Проверь, что скетч загрузился, а ножки плотно сидят в макетке.</dd>
       <dt>Цифры отображаются кашей</dt>
-      <dd>Перепутаны сегменты. Прозвони индикатор мультиметром в режиме диода: красный щуп на ножку разряда (например, 12), чёрный по очереди на остальные.</dd>
+      <dd>Перепутаны сегменты, или провода стоят по одному варианту, а залит код другого. Прозвони индикатор мультиметром в режиме диода: красный щуп на ножку разряда (например, 12), чёрный по очереди на остальные.</dd>
       <dt>Цифры идут в обратном порядке</dt>
-      <dd>Поменяй местами провода разрядов D5↔D2 и D4↔D3 или переверни массив <code>DIG</code> в коде.</dd>
+      <dd>Переверни массив <code>DIG</code> в коде или поменяй местами провода первого и четвёртого, второго и третьего разрядов.</dd>
       <dt>Точка горит сверху</dt>
       <dd>Индикатор стоит вверх ногами. Разверни его точками вниз и переставь провода по номерам ножек.</dd>
       <dt>Один сегмент не горит ни в одной цифре</dt>
@@ -156,15 +134,16 @@ e     d     dp    c     g     DIG4  b
 </Base>
 
 <script>
-  const btn = document.querySelector<HTMLButtonElement>('[data-copy]');
-  btn?.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(btn.dataset.copy ?? '');
-      btn.textContent = 'Скопировано';
-    } catch {
-      btn.textContent = 'Не получилось, скачай файл';
-    }
-    setTimeout(() => (btn.textContent = 'Копировать код'), 2000);
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+        btn.textContent = 'Скопировано';
+      } catch {
+        btn.textContent = 'Не получилось, скачай файл';
+      }
+      setTimeout(() => (btn.textContent = 'Копировать код'), 2000);
+    });
   });
 </script>
 
@@ -173,6 +152,13 @@ e     d     dp    c     g     DIG4  b
   .back { display: inline-block; margin-top: 8px; font-size: 14px; text-decoration: none; }
   h1 { font-size: 38px; margin: 12px 0 12px; }
   .lead { font-size: 18px; }
+  .variants-nav {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 18px;
+  }
+  .variants-nav li { margin-bottom: 6px; }
   .pinout {
     background: #141414;
     color: #ff7a5f;
@@ -182,7 +168,6 @@ e     d     dp    c     g     DIG4  b
     font-size: 15px;
     line-height: 1.5;
   }
-  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
   .steps li { margin-bottom: 8px; }
   .note {
     border-left: 3px solid var(--accent);
@@ -191,36 +176,6 @@ e     d     dp    c     g     DIG4  b
     border-radius: 0 var(--radius) var(--radius) 0;
     font-size: 15px;
   }
-  .code-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .btn {
-    display: inline-block;
-    padding: 8px 14px;
-    border-radius: 8px;
-    background: var(--accent);
-    color: #fff;
-    border: 1px solid var(--accent);
-    font: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-  }
-  .btn-ghost { background: transparent; color: var(--fg); border-color: var(--border); }
-  .btn-ghost:hover { border-color: var(--accent); }
-  .code :global(pre) {
-    padding: 16px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    overflow-x: auto;
-    font-size: 14px;
-    line-height: 1.55;
-    background-color: var(--code-bg) !important;
-  }
-  .code :global(.astro-code span) { color: var(--shiki-light); }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) .code :global(.astro-code span) { color: var(--shiki-dark); }
-  }
-  :root[data-theme='dark'] .code :global(.astro-code span) { color: var(--shiki-dark); }
   .faq dt { font-weight: 700; margin-top: 14px; }
   .faq dd { margin: 4px 0 0; color: var(--muted); }
 </style>
