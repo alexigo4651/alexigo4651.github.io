@@ -1,0 +1,139 @@
+---
+import { wires, topRow, bottomRow } from './wiring';
+
+// Layout (SVG user units)
+const W = 940;
+const H = 712;
+const body = { x: 40, y: 220, w: 430, h: 140 };
+const pinX = (i: number) => 84 + i * 58;
+const ARD_X = 700;
+const RES_X = 548; // resistor left edge
+const RES_W = 48;
+
+const byPin = new Map(wires.map((w) => [w.pin, w]));
+
+// Top pins go up into nested lanes (leftmost pin = highest lane), bottom pins go down.
+const topWires = topRow.map((pin, i) => ({ ...byPin.get(pin)!, x: pinX(i), lane: 40 + i * 32, from: body.y - 14 }));
+const bottomWires = [...bottomRow].reverse().map((pin, j) => {
+  const i = bottomRow.indexOf(pin);
+  return { ...byPin.get(pin)!, x: pinX(i), lane: body.y + body.h + 40 + j * 32, from: body.y + body.h + 14 };
+});
+const all = [...topWires, ...bottomWires];
+
+const btn = { d9: 640, gnd: 680, x: 580 };
+---
+
+<figure class="wiring">
+  <div class="scroll">
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="wiring-title">
+      <title id="wiring-title">Схема подключения MSQC6412C и кнопки к Arduino Uno</title>
+
+      {/* Wires */}
+      {
+        all.map((w) => (
+          <g>
+            <path
+              d={`M${w.x},${w.from} V${w.lane} H${ARD_X}`}
+              fill="none"
+              stroke={w.color}
+              stroke-width="3"
+              stroke-linejoin="round"
+            />
+            <circle cx={w.x} cy={w.from} r="4" fill={w.color} />
+            {w.kind === 'segment' ? (
+              <g>
+                <rect x={RES_X} y={w.lane - 7} width={RES_W} height="14" rx="3" class="resistor" />
+                <text x={RES_X + RES_W / 2} y={w.lane - 11} class="res-label">1 кОм</text>
+              </g>
+            ) : null}
+            <text x={ARD_X - 10} y={w.lane - 6} class="wire-label" style={`fill:${w.color}`}>
+              {w.signal}
+            </text>
+          </g>
+        ))
+      }
+
+      {/* Button: D9 -> button -> GND */}
+      <path d={`M${ARD_X},${btn.d9} H${btn.x + 30}`} class="wire-dark" />
+      <path d={`M${btn.x - 30},${btn.d9} V${btn.gnd} H${ARD_X}`} class="wire-dark" />
+      <circle cx={btn.x + 30} cy={btn.d9} r="4" class="node" />
+      <circle cx={btn.x - 30} cy={btn.d9} r="4" class="node" />
+      <path d={`M${btn.x - 34},${btn.d9 - 14} H${btn.x + 34} M${btn.x},${btn.d9 - 14} V${btn.d9 - 26}`} class="wire-dark" />
+      <text x={btn.x} y={btn.d9 - 34} class="res-label">кнопка</text>
+
+      {/* Display body */}
+      <rect x={body.x} y={body.y} width={body.w} height={body.h} rx="6" class="display" />
+      <text x={body.x + body.w / 2} y={body.y + body.h / 2 + 15} class="digits">8.8.8.8.</text>
+      <text x={body.x + body.w} y={body.y - 8} class="part-name">MSQC6412C · общий анод</text>
+      {
+        topWires.map((w) => (
+          <g>
+            <line x1={w.x} y1={body.y} x2={w.x} y2={w.from} class="stub" />
+            <text x={w.x} y={body.y + 18} class="pin-num">{w.pin}</text>
+            <text x={w.x} y={body.y + 34} class="pin-sig">{w.signal}</text>
+          </g>
+        ))
+      }
+      {
+        bottomWires.map((w) => (
+          <g>
+            <line x1={w.x} y1={body.y + body.h} x2={w.x} y2={w.from} class="stub" />
+            <text x={w.x} y={body.y + body.h - 24} class="pin-sig">{w.signal}</text>
+            <text x={w.x} y={body.y + body.h - 8} class="pin-num">{w.pin}</text>
+          </g>
+        ))
+      }
+
+      {/* Arduino Uno */}
+      <rect x={ARD_X} y="12" width="190" height={H - 24} rx="8" class="arduino" />
+      <text x={ARD_X + 95} y={H / 2} class="arduino-name" transform={`rotate(90 ${ARD_X + 95} ${H / 2})`}>
+        Arduino Uno
+      </text>
+      {
+        [...all.map((w) => ({ y: w.lane, label: w.arduino })), { y: btn.d9, label: 'D9' }, { y: btn.gnd, label: 'GND' }].map(
+          (p) => (
+            <g>
+              <rect x={ARD_X - 1} y={p.y - 11} width="54" height="22" rx="4" class="header-pin" />
+              <text x={ARD_X + 26} y={p.y + 5} class="header-label">{p.label}</text>
+            </g>
+          ),
+        )
+      }
+    </svg>
+  </div>
+  <figcaption>
+    Вид на индикатор спереди, точками вниз. Номера ножек как на корпусе: сверху 12–8, снизу 1–7.
+    Сегменты (a–g, dp) идут через резисторы 1 кОм, разряды (DIG1–DIG4) напрямую.
+  </figcaption>
+</figure>
+
+<style>
+  .wiring { margin: 0; }
+  .scroll {
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  svg { display: block; width: 100%; min-width: 680px; height: auto; font-family: var(--mono); }
+  figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+  .display { fill: #141414; }
+  .digits { fill: #3a1a14; font-size: 64px; font-weight: 700; text-anchor: middle; letter-spacing: 6px; }
+  .part-name { fill: var(--muted); font-size: 13px; text-anchor: end; }
+  .pin-num { fill: #f2f2f0; font-size: 14px; font-weight: 700; text-anchor: middle; }
+  .pin-sig { fill: #ff7a5f; font-size: 12px; text-anchor: middle; }
+  .stub { stroke: #9a9792; stroke-width: 3; }
+
+  .resistor { fill: var(--surface); stroke: var(--fg); stroke-width: 1.5; }
+  .res-label { fill: var(--muted); font-size: 11px; text-anchor: middle; }
+  .wire-label { font-size: 12px; font-weight: 700; text-anchor: end; }
+  .wire-dark { fill: none; stroke: var(--fg); stroke-width: 3; stroke-linejoin: round; }
+  .node { fill: var(--fg); }
+
+  .arduino { fill: #0f5e86; }
+  .arduino-name { fill: #ffffffcc; font-size: 22px; font-weight: 700; text-anchor: middle; letter-spacing: 2px; }
+  .header-pin { fill: #111; }
+  .header-label { fill: #fff; font-size: 13px; font-weight: 700; text-anchor: middle; }
+</style>

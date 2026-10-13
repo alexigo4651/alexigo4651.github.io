@@ -1,0 +1,56 @@
+---
+import Base from '../layouts/Base.astro';
+import { projects } from '../data/projects';
+---
+
+<Base title="Мои проекты">
+  <section class="intro">
+    <h1>Проекты</h1>
+    <p>Arduino и электроника: схемы подключения, код и заметки по сборке.</p>
+  </section>
+
+  <ul class="grid">
+    {
+      projects.map((p) => (
+        <li>
+          <a class="card" href={`/projects/${p.slug}/`}>
+            <time datetime={p.date}>{new Date(p.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</time>
+            <h2>{p.title}</h2>
+            <p>{p.summary}</p>
+            <ul class="tags">
+              {p.tags.map((t) => <li>{t}</li>)}
+            </ul>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Base>
+
+<style>
+  .intro h1 { font-size: 40px; margin: 24px 0 8px; }
+  .intro p { color: var(--muted); margin: 0 0 32px; }
+  .grid {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    display: block;
+    height: 100%;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--fg);
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card time { color: var(--muted); font-size: 13px; }
+  .card h2 { margin: 6px 0 8px; font-size: 20px; }
+  .card p { margin: 0 0 14px; color: var(--muted); font-size: 15px; }
+</style>
