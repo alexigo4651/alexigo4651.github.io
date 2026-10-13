@@ -1,12 +1,15 @@
 ---
-import { topRow, bottomRow, type Wire } from './wiring';
+import type { Wire } from './wiring';
 
 interface Props {
   wires: Wire[];
   resistor: string;
   id: string;
+  part: string;
+  topRow: number[];
+  bottomRow: number[];
 }
-const { wires, resistor, id } = Astro.props;
+const { wires, resistor, id, part, topRow, bottomRow } = Astro.props;
 
 // Layout (SVG user units)
 const W = 940;
@@ -20,7 +23,7 @@ const RES_W = 48;
 const byPin = new Map(wires.map((w) => [w.pin, w]));
 
 // Top pins go up into nested lanes (leftmost pin = highest lane), bottom pins go down.
-const topWires = topRow.map((pin, i) => ({ ...byPin.get(pin)!, x: pinX(i), lane: 40 + i * 32, from: body.y - 14 }));
+const topWires = topRow.map((pin, i) => ({ ...byPin.get(pin)!, x: pinX(i), lane: 40 + i * 30, from: body.y - 14 }));
 const bottomWires = [...bottomRow].reverse().map((pin, j) => {
   const i = bottomRow.indexOf(pin);
   return { ...byPin.get(pin)!, x: pinX(i), lane: body.y + body.h + 40 + j * 32, from: body.y + body.h + 14 };
@@ -33,7 +36,7 @@ const btn = { d9: 640, gnd: 680, x: 580 };
 <figure class="wiring">
   <div class="scroll">
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`wiring-title-${id}`}>
-      <title id={`wiring-title-${id}`}>Схема подключения MSQC6412C и кнопки к Arduino Uno</title>
+      <title id={`wiring-title-${id}`}>{`Схема подключения ${part} и кнопки к Arduino Uno`}</title>
 
       {/* Wires */}
       {
@@ -72,7 +75,6 @@ const btn = { d9: 640, gnd: 680, x: 580 };
       {/* Display body */}
       <rect x={body.x} y={body.y} width={body.w} height={body.h} rx="6" class="display" />
       <text x={body.x + body.w / 2} y={body.y + body.h / 2 + 15} class="digits">8.8.8.8.</text>
-      <text x={body.x + body.w} y={body.y - 8} class="part-name">MSQC6412C · общий анод</text>
       {
         topWires.map((w) => (
           <g>
@@ -110,7 +112,7 @@ const btn = { d9: 640, gnd: 680, x: 580 };
     </svg>
   </div>
   <figcaption>
-    Вид на индикатор спереди, точками вниз. Номера ножек как на корпусе: сверху 12–8, снизу 1–7.
+    {part}, общий анод. Вид спереди, точками вниз. Номера ножек как на корпусе: сверху {topRow[0]}–{topRow[topRow.length - 1]}, снизу {bottomRow[0]}–{bottomRow[bottomRow.length - 1]}.
     Сегменты (a–g, dp) идут через резисторы {resistor}, разряды (DIG1–DIG4) напрямую.
   </figcaption>
 </figure>
@@ -129,7 +131,6 @@ const btn = { d9: 640, gnd: 680, x: 580 };
 
   .display { fill: #141414; }
   .digits { fill: #3a1a14; font-size: 64px; font-weight: 700; text-anchor: middle; letter-spacing: 6px; }
-  .part-name { fill: var(--muted); font-size: 13px; text-anchor: end; }
   .pin-num { fill: #f2f2f0; font-size: 14px; font-weight: 700; text-anchor: middle; }
   .pin-sig { fill: #ff7a5f; font-size: 12px; text-anchor: middle; }
   .stub { stroke: #9a9792; stroke-width: 3; }

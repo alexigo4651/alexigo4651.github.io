@@ -37,6 +37,9 @@ export interface Variant {
   id: string;
   title: string;
   summary: string;
+  part: string; // display model
+  topRow: number[]; // pin numbers left to right, digits facing you, dots at the bottom
+  bottomRow: number[];
   resistor: string; // segment resistor value
   sketchFile: string; // file name in public/projects/stopwatch/
   sketchDir: string; // Arduino IDE sketch folder
@@ -50,6 +53,9 @@ export const variants: Variant[] = [
     title: 'Вариант 1: MSQC6412C',
     summary:
       'Под распиновку из документации MSQC6412C. Сегменты на D6–D8 и A0–A4, разряды на D5–D2.',
+    part: 'MSQC6412C',
+    topRow: [12, 11, 10, 9, 8],
+    bottomRow: [1, 2, 3, 4, 5, 6, 7],
     resistor: '1 кОм',
     sketchFile: 'stopwatch.ino',
     sketchDir: 'stopwatch',
@@ -64,6 +70,9 @@ export const variants: Variant[] = [
     title: 'Вариант 2: схема Прил_2 (КИМ)',
     summary:
       'Как на принципиальной схеме из Прил_2: сегменты подряд на D2–D8, разряды K1–K4 на D13–D10. Точка на схеме не подключена, при желании её можно завести на A0.',
+    part: '5641AS/BS (как на схеме Прил_2)',
+    topRow: [12, 11, 10, 9, 8, 7],
+    bottomRow: [1, 2, 3, 4, 5, 6],
     resistor: '240–360 Ом',
     sketchFile: 'stopwatch_v2.ino',
     sketchDir: 'stopwatch_v2',
@@ -78,6 +87,3 @@ export const variants: Variant[] = [
   },
 ];
 
-// Physical rows of the real part (digits facing you, dots at the bottom)
-export const topRow = [12, 11, 10, 9, 8];
-export const bottomRow = [1, 2, 3, 4, 5, 6, 7];

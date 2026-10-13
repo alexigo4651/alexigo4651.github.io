@@ -10,6 +10,16 @@ interface Props {
 const { variant, sketch } = Astro.props;
 const rows = [...variant.wires].sort((a, b) => a.pin - b.pin);
 const base = '/projects/stopwatch/';
+
+// Text pinout: one 6-char column per pin, top row aligned to the left like the real part
+const signal = new Map(variant.wires.map((w) => [w.pin, w.signal]));
+const cols = (cells: (string | number)[]) => cells.map((c) => String(c).padEnd(6)).join('').trimEnd();
+const pinout = [
+  `${cols(variant.topRow).padEnd(6 * variant.bottomRow.length)}  ← верх (${variant.topRow.length} ножек)`,
+  cols(variant.topRow.map((p) => signal.get(p)!)),
+  cols(variant.bottomRow.map((p) => signal.get(p)!)),
+  `${cols(variant.bottomRow).padEnd(6 * variant.bottomRow.length)}  ← низ (${variant.bottomRow.length} ножек)`,
+].join('\n');
 ---
 
 <section class="variant" id={variant.id}>
@@ -17,8 +27,19 @@ const base = '/projects/stopwatch/';
   <p>{variant.summary}</p>
   <slot />
 
+  <h3>Распиновка индикатора: {variant.part}</h3>
+  <p>Цифрами к себе, точками вниз. Снизу нумерация слева направо, сверху справа налево.</p>
+  <pre class="pinout">{pinout}</pre>
+
   <h3>Схема</h3>
-  <WiringDiagram wires={variant.wires} resistor={variant.resistor} id={variant.id} />
+  <WiringDiagram
+    wires={variant.wires}
+    resistor={variant.resistor}
+    id={variant.id}
+    part={variant.part}
+    topRow={variant.topRow}
+    bottomRow={variant.bottomRow}
+  />
 
   <h3>Таблица подключения</h3>
   <div class="table-wrap">
@@ -66,6 +87,15 @@ const base = '/projects/stopwatch/';
 <style>
   .variant { border-top: 1px solid var(--border); margin-top: 48px; }
   .variant h2 { margin-top: 32px; }
+  .pinout {
+    background: #141414;
+    color: #ff7a5f;
+    padding: 16px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    font-size: 15px;
+    line-height: 1.5;
+  }
   .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
   .code-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
   .btn {
