@@ -5,6 +5,9 @@
 //   segments (via 1 kOhm): a=11->D6, b=7->D7, c=4->D8, d=2->A0,
 //                          e=1->A1, f=10->A2, g=5->A3, dp=3->A4
 //   digits (direct):       DIG1=12->D5, DIG2=9->D4, DIG3=8->D3, DIG4=6->D2
+// Pins: A0-A4 are analog pins used as plain digital outputs (A0=D14 ... A4=D18).
+// 13 pins are needed (7 segments + dot + 4 digits + button), but the Uno has only
+// 12 free digital pins (D2-D13; D0/D1 are USB serial). Only the dot needs an analog pin.
 
 const bool COMMON_CATHODE = false;  // common anode display
 

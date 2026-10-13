@@ -6,6 +6,9 @@
 //   segments (via 240-360 Ohm): a=11->D2, b=7->D3, c=4->D4, d=2->D5,
 //                               e=1->D6, f=10->D7, g=5->D8, dp=3->A0 (optional)
 //   digits (direct):            DIG1=12->D13, DIG2=9->D12, DIG3=8->D11, DIG4=6->D10
+// Pins: everything is on digital D2-D13 (12 pins). The dot is not wired on Pril_2;
+// to use it, connect pin 3 to A0 (= D14), it works as a normal digital output.
+// D13 also drives the on-board LED, so the LED flickers - harmless.
 
 const bool COMMON_CATHODE = false;  // common anode display
 
