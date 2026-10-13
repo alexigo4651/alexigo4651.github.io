@@ -1,13 +1,18 @@
-// Stopwatch 0..60 s, 4-digit 7-segment display MSQC6412C (common anode)
-// Button D9 -> GND: start -> stop -> reset -> start ...
-//
-// Display pin -> Arduino:
-//   segments (via 1 kOhm): a=11->D6, b=7->D7, c=4->D8, d=2->A0,
-//                          e=1->A1, f=10->A2, g=5->A3, dp=3->A4
-//   digits (direct):       DIG1=12->D5, DIG2=9->D4, DIG3=8->D3, DIG4=6->D2
-// Pins: A0-A4 are analog pins used as plain digital outputs (A0=D14 ... A4=D18).
-// 13 pins are needed (7 segments + dot + 4 digits + button), but the Uno has only
-// 12 free digital pins (D2-D13; D0/D1 are USB serial). Only the dot needs an analog pin.
+// Stopwatch 0-60 s, MSQC6412C (common anode). Button: start/stop/reset.
+// Wiring, display pin -> Arduino (segments via 1k resistors, digits direct):
+//  1 -> A1   (seg e)
+//  2 -> A0   (seg d)
+//  3 -> A4   (seg dp)
+//  4 -> D8   (seg c)
+//  5 -> A3   (seg g)
+//  6 -> D2   (digit 4)
+//  7 -> D7   (seg b)
+//  8 -> D3   (digit 3)
+//  9 -> D4   (digit 2)
+// 10 -> A2   (seg f)
+// 11 -> D6   (seg a)
+// 12 -> D5   (digit 1)
+// Button: D9 -> GND
 
 const bool COMMON_CATHODE = false;  // common anode display
 

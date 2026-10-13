@@ -1,14 +1,18 @@
-// Stopwatch 0..60 s, wiring variant 2 (exam schematic "Pril_2", KIM 09.02.01)
-// 4-digit 7-segment display, common anode (tested on real hardware)
-// Button D9 -> GND: start -> stop -> reset -> start ...
-//
-// Display pin -> Arduino:
-//   segments (via 240-360 Ohm): a=11->D2, b=7->D3, c=4->D4, d=2->D5,
-//                               e=1->D6, f=10->D7, g=5->D8, dp=3->A0 (optional)
-//   digits (direct):            DIG1=12->D13, DIG2=9->D12, DIG3=8->D11, DIG4=6->D10
-// Pins: everything is on digital D2-D13 (12 pins). The dot is not wired on Pril_2;
-// to use it, connect pin 3 to A0 (= D14), it works as a normal digital output.
-// D13 also drives the on-board LED, so the LED flickers - harmless.
+// Stopwatch 0-60 s, schematic Pril_2 (common anode). Button: start/stop/reset.
+// Wiring, display pin -> Arduino (segments via 240-360 Ohm, digits direct):
+//  1 -> D6   (seg e)
+//  2 -> D5   (seg d)
+//  3 -> A0   (seg dp, optional)
+//  4 -> D4   (seg c)
+//  5 -> D8   (seg g)
+//  6 -> D10  (digit 4)
+//  7 -> D3   (seg b)
+//  8 -> D11  (digit 3)
+//  9 -> D12  (digit 2)
+// 10 -> D7   (seg f)
+// 11 -> D2   (seg a)
+// 12 -> D13  (digit 1)
+// Button: D9 -> GND
 
 const bool COMMON_CATHODE = false;  // common anode display
 
