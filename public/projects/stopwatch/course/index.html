@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Секундомер на Arduino с нуля</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: учебная тетрадь — узкая колонка текста, слева липкое оглавление; индикатор всегда «тёмная плата» */
+:root{
+  --bg:#f2f4f6; --surface:#ffffff; --ink:#17202b; --muted:#5a6572; --line:#d5dbe2;
+  --accent:#c4321f; --accent-soft:#fbe6e1; --code-bg:#e9edf1;
+  --kw:#2453a3; --fn:#7a3fa0; --cn:#0f7468; --num:#a24e00; --cm:#5f7a55;
+  --ok:#1f7a45; --ok-soft:#e1f3e8; --warn:#8a5a00; --warn-soft:#fbf0d6;
+  --panel:#1c1517; --seg-on:#ff3b2c; --seg-off:#3b2b2c; --panel-ink:#f3e9e7;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151a; --surface:#181e25; --ink:#e5eaef; --muted:#9aa5b1; --line:#2b343e;
+  --accent:#ff6b54; --accent-soft:#3a211d; --code-bg:#0d1115;
+  --kw:#8ab4ff; --fn:#d4a5f5; --cn:#6fd6c6; --num:#f2b57d; --cm:#8fb183;
+  --ok:#6fd49a; --ok-soft:#173326; --warn:#f0c46a; --warn-soft:#3a2f14;
+  --panel:#0b0809; --seg-off:#2c1f20; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151a; --surface:#181e25; --ink:#e5eaef; --muted:#9aa5b1; --line:#2b343e;
+  --accent:#ff6b54; --accent-soft:#3a211d; --code-bg:#0d1115;
+  --kw:#8ab4ff; --fn:#d4a5f5; --cn:#6fd6c6; --num:#f2b57d; --cm:#8fb183;
+  --ok:#6fd49a; --ok-soft:#173326; --warn:#f0c46a; --warn-soft:#3a2f14;
+  --panel:#0b0809; --seg-off:#2c1f20; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:14px}
+nav.toc b{display:block;font-family:var(--f-display);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:500}
+nav.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:2px;counter-reset:t}
+nav.toc a{display:block;padding:5px 10px;border-radius:6px;color:var(--ink);text-decoration:none;border-left:2px solid transparent}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--surface);border-left-color:var(--accent);outline:none}
+main{min-width:0;max-width:760px}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr);gap:24px}nav.toc{position:static}nav.toc ol{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,5vw,44px);line-height:1.12;margin:0 0 16px;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-weight:700;font-size:clamp(21px,3vw,27px);line-height:1.25;margin:64px 0 14px;text-wrap:balance;scroll-margin-top:20px}
+h2 .n{color:var(--accent);margin-right:.4em}
+h3{font-size:18px;margin:32px 0 8px;font-weight:700}
+p{margin:0 0 14px}
+a{color:var(--accent)}
+.lead{font-size:18px;color:var(--muted);max-width:62ch}
+.eyebrow{font-family:var(--f-display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;font-weight:500}
+code{font-family:var(--f-mono);font-size:.88em;background:var(--code-bg);padding:1px 5px;border-radius:4px;white-space:nowrap}
+pre{font-family:var(--f-mono);font-size:13.5px;line-height:1.55;background:var(--code-bg);padding:14px 16px;border-radius:8px;overflow-x:auto;margin:0 0 16px;tab-size:2}
+pre code{background:none;padding:0;white-space:pre;font-size:inherit}
+.k{color:var(--kw);font-weight:600}.f{color:var(--fn)}.c{color:var(--cn)}.u{color:var(--num)}.m{color:var(--cm);font-style:italic}
+
+.note{border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:0 0 16px;background:var(--surface)}
+.note.warn{background:var(--warn-soft);border-color:transparent}
+.note.warn b:first-child{color:var(--warn)}
+.note.idea{background:var(--accent-soft);border-color:transparent}
+
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+.tbl{overflow-x:auto;margin:0 0 18px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:none}
+td code{white-space:nowrap}
+
+/* построчный разбор */
+.lines{display:grid;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);margin:0 0 20px}
+.line{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.line:last-child{border-bottom:none}
+.line pre{margin:0;border-radius:0;font-size:13px}
+.line > div{padding:12px 16px;font-size:15px;min-width:0}
+.line > div p:last-child{margin:0}
+@media (max-width:700px){.line{grid-template-columns:minmax(0,1fr)}}
+
+/* индикатор */
+.panel{background:var(--panel);color:var(--panel-ink);border-radius:12px;padding:20px;margin:0 0 20px}
+.digits{display:flex;gap:10px;justify-content:center;flex-wrap:nowrap}
+.digits svg{width:min(19vw,92px);height:auto}
+.seg{fill:var(--seg-off);transition:fill .05s}
+.seg.on{fill:var(--seg-on);filter:drop-shadow(0 0 4px rgba(255,59,44,.6))}
+.digit-cap{display:flex;gap:10px;justify-content:center;font-family:var(--f-mono);font-size:11px;color:#a8908c;margin-top:6px}
+.digit-cap span{width:min(19vw,92px);text-align:center}
+.digit-cap span.act{color:var(--seg-on);font-weight:600}
+.ctrls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+button{font:inherit;font-size:14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel button{background:#2a2022;color:var(--panel-ink);border-color:#4a3a3b}
+.panel button.big{background:var(--seg-on);border-color:var(--seg-on);color:#fff;font-weight:600}
+.panel button[aria-pressed="true"]{border-color:var(--seg-on);color:#ffb3aa}
+.vars{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:16px;font-family:var(--f-mono);font-size:12.5px}
+.vars div{background:#2a2022;border-radius:6px;padding:8px 10px;min-width:0;overflow-wrap:anywhere}
+.vars span{display:block;color:#a8908c;font-size:11px}
+
+.editor{display:grid;grid-template-columns:auto minmax(0,1fr);gap:24px;align-items:center}
+.editor svg{width:140px;height:auto;cursor:pointer}
+.editor .seg{cursor:pointer}
+.editor .seg:hover{stroke:#ff8c80;stroke-width:1}
+.readout{font-family:var(--f-mono);font-size:14px;display:grid;gap:6px;min-width:0}
+.readout .big{font-size:24px;color:var(--seg-on)}
+.bits{display:flex;gap:4px;flex-wrap:wrap}
+.bits div{width:34px;text-align:center;background:#2a2022;border-radius:4px;padding:3px 0;font-size:12px}
+.bits div b{display:block;font-size:16px}
+.bits div.on b{color:var(--seg-on)}
+.numrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.numrow button{padding:6px 11px;font-family:var(--f-mono)}
+@media (max-width:560px){.editor{grid-template-columns:minmax(0,1fr);justify-items:center}}
+
+/* задания */
+.task{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px 20px;margin:0 0 16px}
+.task header{display:flex;gap:12px;align-items:baseline;justify-content:space-between;flex-wrap:wrap;margin-bottom:6px}
+.task h3{margin:0;font-size:17px}
+.lvl{font-size:12px;font-weight:600;letter-spacing:.04em;padding:2px 9px;border-radius:99px;background:var(--code-bg);color:var(--muted);white-space:nowrap}
+.task.done{border-color:var(--ok);background:var(--ok-soft)}
+.done-box{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);cursor:pointer}
+.done-box input{accent-color:var(--ok);width:16px;height:16px}
+details{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:15px}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+details[open] summary{margin-bottom:8px}
+.progress{font-family:var(--f-mono);font-size:14px;color:var(--muted);margin-bottom:14px}
+
+ol.steps{padding-left:22px;margin:0 0 16px}
+ol.steps li{margin-bottom:6px}
+ul{padding-left:22px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <b>Содержание</b>
+  <ol>
+    <li><a href="#start">Как учиться</a></li>
+    <li><a href="#hw">Железо</a></li>
+    <li><a href="#wiring">Подключение</a></li>
+    <li><a href="#codes">Как цифра становится числом</a></li>
+    <li><a href="#sim">Живая модель</a></li>
+    <li><a href="#words">Словарь</a></li>
+    <li><a href="#v3">Вариант 3 построчно</a></li>
+    <li><a href="#v1">Вариант 1: сжатый</a></li>
+    <li><a href="#v2">Вариант 2: отличия</a></li>
+    <li><a href="#tasks">Задания</a></li>
+    <li><a href="#debug">Если не работает</a></li>
+  </ol>
+</nav>
+
+<main>
+<div class="eyebrow">Arduino · 4-разрядный индикатор · кнопка</div>
+<h1>Секундомер на Arduino с нуля</h1>
+<p class="lead">Разбираем три твоих скетча до последнего слова. Сначала поймём, как устроено железо, потом выучим «слова» языка, потом прочитаем код построчно. В конце 12 заданий, после которых ты сможешь писать такие программы сам.</p>
+
+<h2 id="start"><span class="n">1</span>Как учиться по этой странице</h2>
+<ol class="steps">
+  <li>Читай по порядку. Каждый раздел опирается на предыдущий.</li>
+  <li>Начни с <b>варианта 3</b>. Он делает то же самое, что вариант 1, но записан понятно. Варианты 1 и 2 — сжатые версии, их разберём после.</li>
+  <li>Задания делай руками: набирай код сам, не копируй. Так запоминается в разы лучше.</li>
+  <li>Если железа под рукой нет, тренируйся в бесплатном онлайн-симуляторе <a href="https://wokwi.com" target="_blank" rel="noopener">wokwi.com</a>: там есть Arduino Uno, кнопка и 4-разрядный индикатор (деталь «7 Segment», параметр digits = 4, общий анод).</li>
+</ol>
+<div class="note"><b>Как залить код в плату.</b> Установи Arduino IDE с arduino.cc → подключи плату по USB → меню <i>Инструменты → Плата → Arduino Uno</i> → <i>Инструменты → Порт</i> (выбери появившийся COM-порт) → вставь код → кнопка со стрелкой «Загрузить». Внизу должно появиться «Загрузка завершена».</div>
+
+<h2 id="hw"><span class="n">2</span>Что происходит в железе</h2>
+<h3>Arduino и пины</h3>
+<p>Arduino Uno — маленький компьютер с ножками-выводами, которые называют <b>пинами</b>. У каждого пина есть номер: цифровые <code>D0</code>–<code>D13</code> и аналоговые <code>A0</code>–<code>A5</code>. Аналоговые тоже умеют работать как обычные цифровые, в программе у них номера 14–19 (<code>A0</code> = 14, <code>A1</code> = 15 и так далее).</p>
+<p>Пин может работать в двух ролях:</p>
+<ul>
+  <li><b>Выход</b> (OUTPUT). Программа сама выставляет на нём напряжение: <code>HIGH</code> = 5 вольт (логическая 1) или <code>LOW</code> = 0 вольт (логический 0).</li>
+  <li><b>Вход</b> (INPUT). Программа «слушает», какое напряжение на пине снаружи, например нажата ли кнопка.</li>
+</ul>
+<p>Пины <code>D0</code> и <code>D1</code> заняты связью с компьютером по USB, поэтому в твоих схемах их не трогают.</p>
+
+<h3>Семисегментный индикатор</h3>
+<p>Каждая цифра собрана из 7 светодиодных палочек-<b>сегментов</b> и точки. Их всегда называют буквами: <b>a</b> сверху, дальше по часовой <b>b, c, d, e, f</b>, в середине <b>g</b>, точка — <b>dp</b> (decimal point). Зажигая разные сегменты, получаем разные цифры: для «1» горят только b и c.</p>
+<p>У тебя индикатор на <b>4 разряда</b> (4 цифры, 12 выводов). Выводов мало, потому что сегменты одинаковых букв всех четырёх цифр соединены между собой внутри: один вывод «a» на все четыре цифры. Плюс у каждой цифры есть свой общий вывод.</p>
+
+<h3>Общий анод: почему всё «наоборот»</h3>
+<p>Светодиод светится, когда ток идёт от плюса (анод) к минусу (катод). В индикаторе с <b>общим анодом</b> плюсовые концы всех сегментов одной цифры соединены в один вывод разряда. Отсюда правило, которое надо запомнить:</p>
+<div class="tbl"><table>
+<tr><th>Что делаем</th><th>Вывод разряда (цифры)</th><th>Вывод сегмента</th></tr>
+<tr><td>Включить</td><td><code>HIGH</code> (подаём плюс)</td><td><code>LOW</code> (даём путь к минусу)</td></tr>
+<tr><td>Выключить</td><td><code>LOW</code></td><td><code>HIGH</code></td></tr>
+</table></div>
+<p>Сегмент горит, только если его цифра включена (<code>HIGH</code>) и сам сегмент притянут к нулю (<code>LOW</code>). Поэтому в коде ты увидишь «перевёрнутые» записи: <code>LOW</code> значит «зажечь сегмент».</p>
+
+<h3>Мультиплексирование: обман глаза</h3>
+<p>Выводы сегментов общие для всех цифр. Если включить все четыре разряда сразу, на всех будет одна и та же цифра. Поэтому программа зажигает цифры <b>по очереди</b>: первую на 4 миллисекунды, потом вторую, третью, четвёртую, и снова по кругу. Полный круг занимает 16 мс, то есть около 60 раз в секунду. Глаз не успевает заметить мигание и видит все четыре цифры одновременно. Ниже в <a href="#sim">живой модели</a> можно замедлить этот процесс и увидеть его своими глазами.</p>
+
+<h3>Кнопка и подтяжка</h3>
+<p>Кнопка подключена между пином <code>D9</code> и землёй (GND). Внутри Arduino есть резистор, который можно подключить от пина к +5 В: режим <code>INPUT_PULLUP</code> («вход с подтяжкой вверх»). Получается так:</p>
+<ul>
+  <li>кнопка <b>отпущена</b> — резистор тянет пин к 5 В, читаем <code>HIGH</code> (1);</li>
+  <li>кнопка <b>нажата</b> — пин замкнут на землю, читаем <code>LOW</code> (0).</li>
+</ul>
+<p>Опять «наоборот»: нажатие = 0. Без подтяжки пин «висел бы в воздухе» и выдавал случайные значения.</p>
+<p><b>Дребезг.</b> Металлические контакты кнопки в момент нажатия несколько миллисекунд хаотично замыкаются и размыкаются. Программа может принять одно нажатие за пять. Лечится паузой: заметили изменение, подождали 20–30 мс, пока контакты успокоятся.</p>
+
+<h3>Резисторы на сегментах</h3>
+<p>Светодиоду нельзя давать столько тока, сколько он «захочет», он сгорит или сожжёт пин. Резистор на каждом сегменте ограничивает ток. На выводы разрядов резисторы не ставят, иначе яркость зависела бы от числа горящих сегментов.</p>
+<div class="note warn"><b>Внимание к варианту 2.</b> Там указаны резисторы 240–360 Ом. Через один вывод разряда идёт ток всех горящих сегментов сразу; при 8 сегментах и таких резисторах это может превысить допустимые для пина Arduino 40 мА. Безопаснее поставить 680 Ом – 1 кОм, как в варианте 1, или включать разряды через транзисторы.</div>
+
+<h2 id="wiring"><span class="n">3</span>Схема подключения</h2>
+<p>Выводы индикатора нумеруются так: смотришь на индикатор спереди, точки внизу. Вывод 1 — левый нижний, по нижнему ряду слева направо идут 1–6, по верхнему ряду справа налево 7–12. Сверь с даташитом своей модели.</p>
+<div class="tbl"><table>
+<tr><th>Вывод индикатора</th><th>Что это</th><th>Варианты 1 и 3</th><th>Вариант 2</th></tr>
+<tr><td>1</td><td>сегмент e</td><td><code>A1</code> через 1 кОм</td><td><code>D6</code> через резистор</td></tr>
+<tr><td>2</td><td>сегмент d</td><td><code>A0</code> через 1 кОм</td><td><code>D5</code></td></tr>
+<tr><td>3</td><td>точка dp</td><td><code>A4</code> через 1 кОм</td><td><code>A0</code> (необязательно)</td></tr>
+<tr><td>4</td><td>сегмент c</td><td><code>D8</code> через 1 кОм</td><td><code>D4</code></td></tr>
+<tr><td>5</td><td>сегмент g</td><td><code>A3</code> через 1 кОм</td><td><code>D8</code></td></tr>
+<tr><td>6</td><td>разряд 4 (правая цифра)</td><td><code>D2</code> напрямую</td><td><code>D10</code></td></tr>
+<tr><td>7</td><td>сегмент b</td><td><code>D7</code> через 1 кОм</td><td><code>D3</code></td></tr>
+<tr><td>8</td><td>разряд 3</td><td><code>D3</code> напрямую</td><td><code>D11</code></td></tr>
+<tr><td>9</td><td>разряд 2</td><td><code>D4</code> напрямую</td><td><code>D12</code></td></tr>
+<tr><td>10</td><td>сегмент f</td><td><code>A2</code> через 1 кОм</td><td><code>D7</code></td></tr>
+<tr><td>11</td><td>сегмент a</td><td><code>D6</code> через 1 кОм</td><td><code>D2</code></td></tr>
+<tr><td>12</td><td>разряд 1 (левая цифра)</td><td><code>D5</code> напрямую</td><td><code>D13</code></td></tr>
+<tr><td>—</td><td>кнопка</td><td><code>D9</code> ↔ <code>GND</code></td><td><code>D9</code> ↔ <code>GND</code></td></tr>
+</table></div>
+<p>Строки <code>// 1 -&gt; A1 (seg e)</code> в начале каждого скетча — это та же таблица, записанная в комментариях. Такие строки компьютер пропускает, они только для человека.</p>
+
+<h2 id="codes"><span class="n">4</span>Как цифра становится числом</h2>
+<p>В коде есть загадочная строчка <code>F[] = {63, 6, 91, 79, ...}</code>. Это «шрифт» — для каждой цифры от 0 до 9 записано, какие сегменты зажечь. Каждый сегмент — это один <b>бит</b> (ноль или единица) в числе:</p>
+<div class="tbl"><table>
+<tr><th>Бит</th><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
+<tr><th>Сегмент</th><td>a</td><td>b</td><td>c</td><td>d</td><td>e</td><td>f</td><td>g</td></tr>
+<tr><th>«Вес»</th><td>1</td><td>2</td><td>4</td><td>8</td><td>16</td><td>32</td><td>64</td></tr>
+</table></div>
+<p>Код цифры — сумма весов горящих сегментов. Для «0» горят a, b, c, d, e, f: 1 + 2 + 4 + 8 + 16 + 32 = <b>63</b>. Для «1» горят b и c: 2 + 4 = <b>6</b>. Вариант 3 пишет те же числа в шестнадцатеричном виде: <code>0x3F</code> = 63, <code>0x06</code> = 6. Это одни и те же числа, просто разная запись.</p>
+<p>Пощёлкай по сегментам или нажми цифру внизу — увидишь её код:</p>
+
+<div class="panel">
+  <div class="editor">
+    <svg id="ed" viewBox="0 0 70 100" aria-label="Редактор сегментов"></svg>
+    <div class="readout">
+      <div>Десятичный код: <span class="big" id="edDec">0</span></div>
+      <div>Шестнадцатеричный: <span id="edHex">0x00</span></div>
+      <div class="bits" id="edBits"></div>
+      <div style="color:#a8908c;font-size:12px" id="edPins"></div>
+    </div>
+  </div>
+  <div class="numrow" id="edNums"></div>
+  <div class="ctrls"><button id="edClear" type="button">Погасить всё</button></div>
+</div>
+
+<h2 id="sim"><span class="n">5</span>Живая модель секундомера</h2>
+<p>Это копия логики варианта 3 в браузере. Кнопка работает так же, как на плате: <b>1-е нажатие</b> — старт, <b>2-е</b> — стоп, <b>3-е</b> — сброс на ноль. Включи «замедлить в 100 раз» и посмотри, как цифры зажигаются по одной.</p>
+<div class="panel">
+  <div class="digits" id="simDigits"></div>
+  <div class="digit-cap" id="simCap"><span>разряд 1 · D5</span><span>разряд 2 · D4</span><span>разряд 3 · D3</span><span>разряд 4 · D2</span></div>
+  <div class="ctrls">
+    <button class="big" id="simBtn" type="button">Кнопка D9</button>
+    <button id="simSlow" type="button" aria-pressed="false">Замедлить в 100 раз</button>
+    <button id="simFast" type="button" aria-pressed="false">Время ×10</button>
+  </div>
+  <div class="vars">
+    <div><span>m — режим</span><b id="vM">0</b></div>
+    <div><span>n — секунды</span><b id="vN">0</b></div>
+    <div><span>d — текущий разряд</span><b id="vD">0</b></div>
+    <div><span>k — код цифры</span><b id="vK">0</b></div>
+  </div>
+</div>
+
+<h2 id="words"><span class="n">6</span>Словарь: все слова из кода</h2>
+<p>Программа для Arduino пишется на языке C++. Ниже каждое слово и значок, которые встречаются в трёх вариантах.</p>
+<h3>Знаки препинания</h3>
+<div class="tbl"><table>
+<tr><th>Знак</th><th>Что значит</th></tr>
+<tr><td><code>//</code></td><td>Комментарий. Всё после него до конца строки компьютер игнорирует.</td></tr>
+<tr><td><code>;</code></td><td>Конец команды, как точка в предложении. Забытая <code>;</code> — самая частая ошибка новичка.</td></tr>
+<tr><td><code>{ }</code></td><td>Фигурные скобки объединяют несколько команд в один блок. Также в них перечисляют значения массива.</td></tr>
+<tr><td><code>( )</code></td><td>Круглые скобки: параметры функции (<code>delay(4)</code>), условие (<code>if (...)</code>), порядок вычислений.</td></tr>
+<tr><td><code>[ ]</code></td><td>Номер элемента в массиве: <code>S[0]</code> — первый элемент. Счёт идёт <b>с нуля</b>.</td></tr>
+<tr><td><code>,</code></td><td>Разделитель между значениями. В варианте 1 есть особый случай — «оператор запятая», он разобран ниже.</td></tr>
+</table></div>
+
+<h3>Типы данных: что лежит в «коробке»</h3>
+<p>Переменная — это подписанная коробка в памяти, куда кладут число. Тип говорит, какого размера коробка.</p>
+<div class="tbl"><table>
+<tr><th>Слово</th><th>Что хранит</th></tr>
+<tr><td><code>byte</code></td><td>Целое число от 0 до 255. Занимает 1 байт.</td></tr>
+<tr><td><code>uint8_t</code></td><td>То же самое, что <code>byte</code>: «unsigned int, 8 бит» — беззнаковое, 8 бит.</td></tr>
+<tr><td><code>uint16_t</code></td><td>Целое от 0 до 65 535 (16 бит).</td></tr>
+<tr><td><code>uint32_t</code> / <code>unsigned long</code></td><td>Целое от 0 до 4 294 967 295 (32 бита). Нужно для времени в миллисекундах, оно быстро растёт.</td></tr>
+<tr><td><code>bool</code></td><td>Логическое значение: <code>true</code> (1, правда) или <code>false</code> (0, ложь).</td></tr>
+<tr><td><code>const</code></td><td>«Константа»: значение нельзя менять после создания. Защищает от случайной порчи таблиц.</td></tr>
+<tr><td><code>void</code></td><td>«Пусто». Пишется перед функцией, которая ничего не возвращает.</td></tr>
+</table></div>
+<p>Переменные, объявленные вне функций (в начале файла), называются <b>глобальными</b>. Они живут всё время работы программы, и в начале в них лежит 0, если не указано другое.</p>
+
+<h3>Две главные функции Arduino</h3>
+<div class="tbl"><table>
+<tr><th>Слово</th><th>Что значит</th></tr>
+<tr><td><code>void setup() { ... }</code></td><td>Выполняется <b>один раз</b> при включении. Здесь настраивают пины.</td></tr>
+<tr><td><code>void loop() { ... }</code></td><td>Выполняется <b>бесконечно</b>, снова и снова. В твоём секундомере примерно 240 раз в секунду.</td></tr>
+</table></div>
+
+<h3>Команды Arduino</h3>
+<div class="tbl"><table>
+<tr><th>Команда</th><th>Что делает</th></tr>
+<tr><td><code>pinMode(9, INPUT_PULLUP)</code></td><td>Настраивает режим пина: <code>OUTPUT</code> — выход, <code>INPUT</code> — вход, <code>INPUT_PULLUP</code> — вход с подтяжкой к +5 В.</td></tr>
+<tr><td><code>digitalWrite(6, LOW)</code></td><td>Выставляет на выходе <code>HIGH</code> (5 В) или <code>LOW</code> (0 В). Вместо слов можно писать 1 и 0.</td></tr>
+<tr><td><code>digitalRead(9)</code></td><td>Читает пин и возвращает 1 (<code>HIGH</code>) или 0 (<code>LOW</code>).</td></tr>
+<tr><td><code>delay(4)</code></td><td>Ждёт указанное число миллисекунд. 1000 мс = 1 секунда. Пока ждёт, программа больше ничего не делает.</td></tr>
+<tr><td><code>millis()</code></td><td>Сколько миллисекунд прошло с включения платы. Секундомер «смотрит на часы» через эту команду.</td></tr>
+<tr><td><code>A0</code> … <code>A5</code></td><td>Имена аналоговых пинов (это числа 14…19).</td></tr>
+</table></div>
+
+<h3>Управление ходом программы</h3>
+<div class="tbl"><table>
+<tr><th>Конструкция</th><th>Что значит</th></tr>
+<tr><td><code>if (условие) { ... }</code></td><td>«Если условие выполнено — сделай». Без фигурных скобок действует только на одну следующую команду.</td></tr>
+<tr><td><code>for (uint8_t i = 0; i &lt; 8; i++) { ... }</code></td><td>Цикл-повторялка. Три части через <code>;</code>: начало (<code>i = 0</code>), условие продолжения (<code>i &lt; 8</code>), шаг (<code>i++</code>). Здесь тело выполнится 8 раз: для i = 0, 1, …, 7.</td></tr>
+<tr><td><code>условие ? A : B</code></td><td>Тернарный оператор, короткое «если»: если условие верно — результат A, иначе B. <code>x &gt; 5 ? 1 : 0</code>.</td></tr>
+</table></div>
+
+<h3>Операции с числами</h3>
+<div class="tbl"><table>
+<tr><th>Знак</th><th>Что значит</th><th>Пример</th></tr>
+<tr><td><code>=</code></td><td>Положить значение в переменную (не «равно»!)</td><td><code>n = 0</code></td></tr>
+<tr><td><code>==</code></td><td>Сравнение «равно?»</td><td><code>m == 1</code></td></tr>
+<tr><td><code>!=</code></td><td>Сравнение «не равно?»</td><td><code>c != b</code></td></tr>
+<tr><td><code>&lt; &gt; &lt;= &gt;=</code></td><td>Меньше, больше, меньше или равно, больше или равно</td><td><code>n &gt;= 60</code></td></tr>
+<tr><td><code>+ - *</code></td><td>Сложение, вычитание, умножение</td><td><code>5 - c</code></td></tr>
+<tr><td><code>/</code></td><td>Деление <b>нацело</b>, остаток отбрасывается</td><td><code>45 / 10</code> = 4</td></tr>
+<tr><td><code>%</code></td><td>Остаток от деления</td><td><code>45 % 10</code> = 5</td></tr>
+<tr><td><code>++</code></td><td>Увеличить на 1. <code>++n</code> сначала увеличивает, потом отдаёт значение</td><td><code>++n</code></td></tr>
+<tr><td><code>+=</code></td><td>Прибавить к тому, что уже есть</td><td><code>t += 1000</code> = <code>t = t + 1000</code></td></tr>
+<tr><td><code>&amp;&amp;</code></td><td>Логическое «И»: оба условия верны</td><td><code>m == 1 &amp;&amp; ...</code></td></tr>
+<tr><td><code>||</code></td><td>Логическое «ИЛИ»: хотя бы одно верно</td><td><code>p &lt; 9 || p &gt; 13</code></td></tr>
+<tr><td><code>!</code></td><td>Логическое «НЕ»: переворачивает 1 в 0 и 0 в 1</td><td><code>!c</code></td></tr>
+<tr><td><code>&gt;&gt;</code></td><td>Сдвиг битов вправо: <code>k &gt;&gt; 2</code> сдвигает биты числа на 2 позиции</td><td><code>k &gt;&gt; s</code></td></tr>
+<tr><td><code>&amp;</code></td><td>Побитовое «И». <code>x &amp; 1</code> оставляет только младший бит, <code>x &amp; 3</code> — два младших</td><td><code>(d + 1) &amp; 3</code></td></tr>
+</table></div>
+<div class="note idea"><b>Главный трюк: <code>k &gt;&gt; s &amp; 1</code>.</b> Это вопрос «включён ли сегмент номер s в коде k?». Пример: k = 6 (цифра «1»), в двоичном виде <code>0000110</code>. Для s = 1: сдвигаем на 1 вправо → <code>0000011</code>, берём последний бит → 1, сегмент b горит. Для s = 0: сдвиг не нужен, последний бит 0, сегмент a не горит.</div>
+
+<h2 id="v3"><span class="n">7</span>Вариант 3 построчно</h2>
+<p>Начинаем с самого понятного. Слева код, справа объяснение.</p>
+<h3>Таблицы и переменные</h3>
+<div class="lines">
+  <div class="line"><pre class="cpp">const uint8_t S[8] = {6, 7, 8, A0, A1, A2, A3, A4};    // a b c d e f g dp</pre><div><p>Массив <b>S</b> (от «segments») из 8 элементов: номера пинов, к которым подключены сегменты, по порядку a, b, c, d, e, f, g, dp. <code>S[0]</code> = 6 — сегмент a на D6. <code>S[7]</code> = A4 — точка.</p></div></div>
+  <div class="line"><pre class="cpp">const uint8_t D[4] = {5, 4, 3, 2};</pre><div><p>Массив <b>D</b> (от «digits»): пины разрядов слева направо. Разряд 1 на D5, разряд 4 на D2.</p></div></div>
+  <div class="line"><pre class="cpp">const uint8_t F[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66,
+                       0x6D, 0x7D, 0x07, 0x7F, 0x6F};</pre><div><p>«Шрифт» <b>F</b> (от «font»): коды цифр 0…9 из <a href="#codes">раздела 4</a>. <code>F[7]</code> = 0x07 — код семёрки.</p></div></div>
+  <div class="line"><pre class="cpp">uint8_t d, m, b = 1;</pre><div><p>Три переменные сразу.<br><b>d</b> — какой разряд горит сейчас (0…3).<br><b>m</b> — режим: 0 = сброшен, 1 = идёт счёт, 2 = остановлен.<br><b>b</b> — каким кнопка была в прошлый раз. Начинаем с 1, потому что отпущенная кнопка читается как 1.</p></div></div>
+  <div class="line"><pre class="cpp">uint16_t n;</pre><div><p><b>n</b> — сколько секунд насчитали.</p></div></div>
+  <div class="line"><pre class="cpp">uint32_t t;</pre><div><p><b>t</b> — отметка времени (в мс), когда началась текущая секунда.</p></div></div>
+</div>
+
+<h3>setup — настройка</h3>
+<div class="lines">
+  <div class="line"><pre class="cpp">void setup() {</pre><div><p>Начало функции настройки, выполнится один раз.</p></div></div>
+  <div class="line"><pre class="cpp">  for (uint8_t i = 0; i &lt; 8; i++) pinMode(S[i], OUTPUT);</pre><div><p>Повторить 8 раз: сделать выходом пин <code>S[i]</code>. По сути это 8 строк <code>pinMode(6, OUTPUT); pinMode(7, OUTPUT); …</code>, записанные одной.</p></div></div>
+  <div class="line"><pre class="cpp">  for (uint8_t i = 0; i &lt; 4; i++) pinMode(D[i], OUTPUT);</pre><div><p>То же для четырёх пинов разрядов.</p></div></div>
+  <div class="line"><pre class="cpp">  pinMode(9, INPUT_PULLUP);
+}</pre><div><p>Пин кнопки — вход с подтяжкой. Закрывающая скобка завершает <code>setup</code>.</p></div></div>
+</div>
+
+<h3>loop, часть 1 — кнопка</h3>
+<div class="lines">
+  <div class="line"><pre class="cpp">void loop() {
+  uint8_t c = digitalRead(9);</pre><div><p>Читаем кнопку прямо сейчас и кладём в новую переменную <b>c</b> (current — текущее). 1 = отпущена, 0 = нажата.</p></div></div>
+  <div class="line"><pre class="cpp">  if (c != b) {</pre><div><p>Если сейчас не так, как было в прошлый раз, значит кнопку только что нажали или отпустили. Пока кнопку держат, <code>c</code> и <code>b</code> равны, и повторно ничего не срабатывает.</p></div></div>
+  <div class="line"><pre class="cpp">    b = c; delay(20);</pre><div><p>Запоминаем новое состояние и ждём 20 мс, пока пройдёт дребезг.</p></div></div>
+  <div class="line"><pre class="cpp">    if (!c) {</pre><div><p><code>!c</code> верно, когда c = 0, то есть кнопку именно <b>нажали</b>. Отпускание игнорируем.</p></div></div>
+  <div class="line"><pre class="cpp">      m = (m + 1) % 3;</pre><div><p>Следующий режим по кругу: 0 → 1 → 2 → 0. Остаток от деления на 3 не даёт выйти за 2: (2 + 1) % 3 = 0.</p></div></div>
+  <div class="line"><pre class="cpp">      if (m == 1) t = millis();</pre><div><p>Перешли в «счёт» — запоминаем момент старта.</p></div></div>
+  <div class="line"><pre class="cpp">      if (!m) n = 0;
+    }
+  }</pre><div><p><code>!m</code> верно, когда m = 0. Перешли в «сброс» — обнуляем секунды. Две скобки закрывают оба <code>if</code>.</p></div></div>
+</div>
+
+<h3>loop, часть 2 — счёт времени</h3>
+<div class="lines">
+  <div class="line"><pre class="cpp">  if (m == 1 &amp;&amp; millis() - t &gt;= 1000) {</pre><div><p>Если идёт счёт <b>и</b> с отметки прошло 1000 мс или больше — наступила новая секунда. <code>millis() - t</code> — сколько прошло.</p></div></div>
+  <div class="line"><pre class="cpp">    t += 1000;</pre><div><p>Сдвигаем отметку ровно на секунду вперёд. Не <code>t = millis()</code>, чтобы мелкие задержки не накапливались и секундомер не отставал.</p></div></div>
+  <div class="line"><pre class="cpp">    if (++n &gt;= 60) m = 2;
+  }</pre><div><p>Прибавляем секунду. Дошли до 60 — переходим в режим «стоп», счёт замирает на 60.</p></div></div>
+</div>
+
+<h3>loop, часть 3 — вывод на индикатор</h3>
+<div class="lines">
+  <div class="line"><pre class="cpp">  digitalWrite(D[d], LOW);</pre><div><p>Гасим разряд, который горел. Если этого не сделать, при смене сегментов на нём мелькнёт чужая цифра.</p></div></div>
+  <div class="line"><pre class="cpp">  d = (d + 1) &amp; 3;</pre><div><p>Переходим к следующему разряду: 0 → 1 → 2 → 3 → 0. <code>&amp; 3</code> работает как <code>% 4</code>: 4 &amp; 3 = 0.</p></div></div>
+  <div class="line"><pre class="cpp">  uint8_t k = F[d == 0 ? n / 1000
+            : d == 1 ? n / 100 % 10
+            : d == 2 ? n / 10 % 10
+            :          n % 10];</pre><div><p>Выбираем, какую цифру числа n показать в этом разряде, и берём её код из шрифта. Цепочка «?:» читается так: если d = 0 — тысячи, иначе если d = 1 — сотни, иначе если 2 — десятки, иначе — единицы.<br>Пример, n = 45: 45 / 1000 = 0; 45 / 100 % 10 = 0; 45 / 10 % 10 = 4; 45 % 10 = 5. На экране «0045».</p></div></div>
+  <div class="line"><pre class="cpp">  for (uint8_t s = 0; s &lt; 7; s++)
+    digitalWrite(S[s], (k &gt;&gt; s &amp; 1) ? LOW : HIGH);</pre><div><p>Для каждого из 7 сегментов: если его бит в коде равен 1 — пишем <code>LOW</code> (зажечь, ведь общий анод), иначе <code>HIGH</code> (погасить).</p></div></div>
+  <div class="line"><pre class="cpp">  digitalWrite(S[7], (m == 1 &amp;&amp; millis() - t &lt; 500) ? LOW : HIGH);</pre><div><p>Точка: горит, если идёт счёт и мы в первой половине секунды. Получается мигание раз в секунду — видно, что секундомер работает. Точка мигает на всех четырёх разрядах.</p></div></div>
+  <div class="line"><pre class="cpp">  digitalWrite(D[d], HIGH);</pre><div><p>Сегменты выставлены — включаем новый разряд. Загорается нужная цифра.</p></div></div>
+  <div class="line"><pre class="cpp">  delay(4);
+}</pre><div><p>Даём цифре посветить 4 мс. Потом <code>loop</code> начинается заново со следующим разрядом.</p></div></div>
+</div>
+
+<h2 id="v1"><span class="n">8</span>Вариант 1: та же программа, сжатая</h2>
+<p>Вариант 1 работает на той же схеме и делает то же самое, но экономит каждый символ. Ниже каждая хитрая строка и её «развёрнутый» вид.</p>
+<div class="lines">
+  <div class="line"><pre class="cpp">byte m,l=1,c,s;unsigned long t;</pre><div><p>Те же переменные под другими именами: <b>l</b> (last) = <b>b</b> из варианта 3, <b>c</b> = номер разряда (<b>d</b>), <b>s</b> = секунды (<b>n</b>).</p></div></div>
+  <div class="line"><pre class="cpp">for(byte p=2;p&lt;19;p++)
+  if(p&lt;9||p&gt;13)pinMode(p,OUTPUT);</pre><div><p>Перебираем пины 2…18 и делаем выходом те, что меньше 9 или больше 13. Получается D2–D8 и 14–18 (это A0–A4). Пины 9–13 пропускаем: на 9 кнопка, 10–13 не используются. Без массивов, но зато привязано к конкретной распиновке.</p></div></div>
+  <div class="line"><pre class="cpp">bool b=digitalRead(9);
+if(b!=l&amp;&amp;(l=b,delay(30),!b)){</pre><div><p>Самая хитрая строка. <b>Оператор запятая</b> выполняет выражения слева направо и отдаёт результат последнего. Значит, <code>(l=b, delay(30), !b)</code> = «запомни состояние, подожди 30 мс, ответь: нажата ли кнопка?». А <code>&amp;&amp;</code> выполняет правую часть, только если левая верна. Развёрнуто:</p>
+<pre class="cpp">if (b != l) {
+  l = b; delay(30);
+  if (!b) { ... }
+}</pre></div></div>
+  <div class="line"><pre class="cpp">if(++m&gt;2)m=0;
+if(m&lt;2)s=0;
+t=millis();</pre><div><p>Сначала увеличиваем m; если стало 3 — обратно в 0. Затем при режимах 0 и 1 обнуляем секунды (при старте и при сбросе). Отметку времени ставим при любом нажатии — на результат это не влияет.</p></div></div>
+  <div class="line"><pre class="cpp">if(m==1&amp;&amp;millis()-t&gt;=1000){t+=1000;if(++s&gt;59)m=2;}</pre><div><p>Ровно как в варианте 3: <code>s &gt; 59</code> — то же, что <code>s &gt;= 60</code>.</p></div></div>
+  <div class="line"><pre class="cpp">digitalWrite(5-c,0);c=(c+1)&amp;3;</pre><div><p>Вместо массива D — формула. При c = 0 получается пин 5 (разряд 1), c = 1 → 4, c = 2 → 3, c = 3 → 2. Работает только потому, что разряды подключены к идущим подряд пинам. <code>0</code> — это <code>LOW</code>.</p></div></div>
+  <div class="line"><pre class="cpp">byte k=F[c&lt;2?0:c&lt;3?s/10:s%10];</pre><div><p>Число не больше 60, поэтому первые два разряда всегда показывают 0. Третий (c = 2) — десятки, четвёртый — единицы.</p></div></div>
+  <div class="line"><pre class="cpp">for(byte i=0;i&lt;7;i++)
+  digitalWrite(S[i],!(k&gt;&gt;i&amp;1));</pre><div><p>Бит 1 → <code>!1</code> = 0 = LOW → сегмент горит. Бит 0 → <code>!0</code> = 1 = HIGH → не горит. То же самое, что «? LOW : HIGH».</p></div></div>
+  <div class="line"><pre class="cpp">digitalWrite(S[7],!(m==1&amp;&amp;millis()-t&lt;500));
+digitalWrite(5-c,1);delay(4);</pre><div><p>Мигающая точка, включение разряда, пауза 4 мс. Всё как в варианте 3.</p></div></div>
+</div>
+<div class="note"><b>Вывод:</b> короткий код не быстрее и не лучше. Компилятор превращает оба варианта почти в одно и то же. Пиши как в варианте 3: через полгода ты сам скажешь себе спасибо.</div>
+
+<h2 id="v2"><span class="n">9</span>Вариант 2: что отличается</h2>
+<p>Логика полностью совпадает с вариантом 1. Отличается только распиновка (см. таблицу в <a href="#wiring">разделе 3</a>):</p>
+<div class="lines">
+  <div class="line"><pre class="cpp">const byte S[]={2,3,4,5,6,7,8,A0}</pre><div><p>Сегменты a…g на пинах D2–D8 подряд, точка на A0.</p></div></div>
+  <div class="line"><pre class="cpp">for(byte p=2;p&lt;15;p++)if(p!=9)pinMode(p,OUTPUT);</pre><div><p>Выходами становятся пины 2…14 кроме 9 (кнопки). 14 — это A0.</p></div></div>
+  <div class="line"><pre class="cpp">digitalWrite(13-c,0); ... digitalWrite(13-c,1);</pre><div><p>Разряды на D13, D12, D11, D10: c = 0 → пин 13 (разряд 1) … c = 3 → пин 10 (разряд 4).</p></div></div>
+</div>
+<p>На D13 на плате Uno распаян встроенный светодиод «L». Он будет слегка светиться вместе с первым разрядом — это нормально.</p>
+
+<h2 id="tasks"><span class="n">10</span>Задания</h2>
+<p>Идут от простого к сложному. Сначала попробуй сам, подсказку открывай, только если застрял на 10–15 минут. Отмечай сделанное — отметки сохранятся в этом браузере.</p>
+<div class="progress" id="progress">Сделано: 0 из 12</div>
+
+<div class="task" data-id="t1"><header><h3>1. Мигалка</h3><span class="lvl">разминка</span></header>
+<p>Заставь встроенный светодиод платы (пин 13, имя <code>LED_BUILTIN</code>) мигать: полсекунды горит, полсекунды не горит. Это «Hello world» мира Arduino. Внешние детали не нужны.</p>
+<details><summary>Подсказка</summary><p>В <code>setup</code> нужен один <code>pinMode</code>. В <code>loop</code> — две пары <code>digitalWrite</code> + <code>delay</code>.</p></details>
+<details><summary>Ответ</summary><pre class="cpp">void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);  // зажечь
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);   // погасить
+  delay(500);
+}</pre><p>Попробуй поменять числа в <code>delay</code> и посмотри, что изменится.</p></details>
+<label class="done-box"><input type="checkbox" id="c-t1"> Сделано</label></div>
+
+<div class="task" data-id="t2"><header><h3>2. Кнопка-фонарик</h3><span class="lvl">разминка</span></header>
+<p>Подключи кнопку между D9 и GND. Пока кнопку держишь, встроенный светодиод горит; отпустил — гаснет.</p>
+<details><summary>Подсказка</summary><p>Не забудь <code>INPUT_PULLUP</code>. Помни, что нажатая кнопка читается как <code>LOW</code>. Нужен <code>if ... else</code>: «иначе».</p></details>
+<details><summary>Ответ</summary><pre class="cpp">void setup() {
+  pinMode(9, INPUT_PULLUP);
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  if (digitalRead(9) == LOW) digitalWrite(LED_BUILTIN, HIGH);
+  else digitalWrite(LED_BUILTIN, LOW);
+}</pre></details>
+<label class="done-box"><input type="checkbox" id="c-t2"> Сделано</label></div>
+
+<div class="task" data-id="t3"><header><h3>3. Кнопка-выключатель</h3><span class="lvl">основа</span></header>
+<p>Теперь одно нажатие включает светодиод, следующее — выключает, и так далее. Это ровно тот приём, которым секундомер переключает режимы.</p>
+<details><summary>Подсказка</summary><p>Нужна переменная, которая помнит прошлое состояние кнопки (как <code>b</code> в варианте 3), и переменная «включено/выключено» типа <code>bool</code>. Переключать её можно так: <code>on = !on;</code></p></details>
+<details><summary>Ответ</summary><pre class="cpp">uint8_t b = 1;     // прошлое состояние кнопки: отпущена
+bool on = false;   // горит ли светодиод
+
+void setup() {
+  pinMode(9, INPUT_PULLUP);
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  uint8_t c = digitalRead(9);
+  if (c != b) {          // кнопка изменилась
+    b = c;
+    delay(20);           // ждём конца дребезга
+    if (c == LOW) on = !on;   // реагируем только на нажатие
+  }
+  digitalWrite(LED_BUILTIN, on ? HIGH : LOW);
+}</pre><p>Эксперимент: убери <code>delay(20)</code> и понажимай. Иногда светодиод будет «не слушаться» — это и есть дребезг.</p></details>
+<label class="done-box"><input type="checkbox" id="c-t3"> Сделано</label></div>
+
+<div class="task" data-id="t4"><header><h3>4. Свой шрифт</h3><span class="lvl">основа</span></header>
+<p>Посчитай на бумаге коды для символов <b>H</b>, <b>E</b>, <b>P</b>, <b>A</b> и знака минус <b>-</b>. Потом проверь себя в <a href="#codes">редакторе сегментов</a>.</p>
+<details><summary>Подсказка</summary><p>Нарисуй символ из палочек, выпиши буквы горящих сегментов и сложи их веса: a=1, b=2, c=4, d=8, e=16, f=32, g=64.</p></details>
+<details><summary>Ответ</summary><div class="tbl"><table>
+<tr><th>Символ</th><th>Сегменты</th><th>Код</th></tr>
+<tr><td>H</td><td>b c e f g</td><td>2+4+16+32+64 = 118 (0x76)</td></tr>
+<tr><td>E</td><td>a d e f g</td><td>1+8+16+32+64 = 121 (0x79)</td></tr>
+<tr><td>P</td><td>a b e f g</td><td>1+2+16+32+64 = 115 (0x73)</td></tr>
+<tr><td>A</td><td>a b c e f g</td><td>1+2+4+16+32+64 = 119 (0x77)</td></tr>
+<tr><td>-</td><td>g</td><td>64 (0x40)</td></tr>
+</table></div></details>
+<label class="done-box"><input type="checkbox" id="c-t4"> Сделано</label></div>
+
+<div class="task" data-id="t5"><header><h3>5. Одна цифра</h3><span class="lvl">индикатор</span></header>
+<p>Собери схему варианта 3. Напиши программу, которая показывает цифру <b>7</b> только на правом разряде (разряд 4, пин D2). Без мультиплексирования, весь код в <code>setup</code>, <code>loop</code> пустой.</p>
+<details><summary>Подсказка</summary><p>Возьми массив <code>S</code> из варианта 3. Сначала погаси все сегменты (<code>HIGH</code>), включи разряд 4 (<code>HIGH</code> на D2), потом выстави сегменты по коду 0x07 тем же циклом, что в варианте 3.</p></details>
+<details><summary>Ответ</summary><pre class="cpp">const uint8_t S[8] = {6, 7, 8, A0, A1, A2, A3, A4};
+
+void setup() {
+  for (uint8_t i = 0; i &lt; 8; i++) {
+    pinMode(S[i], OUTPUT);
+    digitalWrite(S[i], HIGH);       // все сегменты погашены
+  }
+  pinMode(2, OUTPUT);
+  digitalWrite(2, HIGH);            // включаем разряд 4
+
+  uint8_t k = 0x07;                 // код семёрки
+  for (uint8_t s = 0; s &lt; 7; s++)
+    digitalWrite(S[s], (k &gt;&gt; s &amp; 1) ? LOW : HIGH);
+}
+
+void loop() {}</pre><p>Потом попробуй показать «E» кодом из задания 4.</p></details>
+<label class="done-box"><input type="checkbox" id="c-t5"> Сделано</label></div>
+
+<div class="task" data-id="t6"><header><h3>6. Число 1234</h3><span class="lvl">индикатор</span></header>
+<p>Выведи на индикатор число <b>1234</b> с помощью мультиплексирования. Затем поменяй <code>delay(4)</code> на <code>delay(200)</code> и посмотри, как разряды загораются по очереди.</p>
+<details><summary>Подсказка</summary><p>Возьми из варианта 3 массивы S, D, F и часть 3 функции <code>loop</code> (вывод). Добавь массив с цифрами: <code>const uint8_t N[4] = {1, 2, 3, 4};</code></p></details>
+<details><summary>Ответ</summary><pre class="cpp">const uint8_t S[8] = {6, 7, 8, A0, A1, A2, A3, A4};
+const uint8_t D[4] = {5, 4, 3, 2};
+const uint8_t F[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};
+const uint8_t N[4] = {1, 2, 3, 4};   // что показать в каждом разряде
+uint8_t d;
+
+void setup() {
+  for (uint8_t i = 0; i &lt; 8; i++) pinMode(S[i], OUTPUT);
+  for (uint8_t i = 0; i &lt; 4; i++) pinMode(D[i], OUTPUT);
+}
+
+void loop() {
+  digitalWrite(D[d], LOW);
+  d = (d + 1) &amp; 3;
+  uint8_t k = F[N[d]];
+  for (uint8_t s = 0; s &lt; 7; s++) digitalWrite(S[s], (k &gt;&gt; s &amp; 1) ? LOW : HIGH);
+  digitalWrite(S[7], HIGH);            // точка не горит
+  digitalWrite(D[d], HIGH);
+  delay(4);
+}</pre></details>
+<label class="done-box"><input type="checkbox" id="c-t6"> Сделано</label></div>
+
+<div class="task" data-id="t7"><header><h3>7. Секундомер до 30</h3><span class="lvl">правка</span></header>
+<p>Измени вариант 3 так, чтобы счёт останавливался на 30 секундах. Затем сделай то же самое в варианте 1.</p>
+<details><summary>Подсказка</summary><p>Найди строку, где секунды увеличиваются и сравниваются с пределом.</p></details>
+<details><summary>Ответ</summary><p>Вариант 3: <code>if (++n &gt;= 60) m = 2;</code> → <code>if (++n &gt;= 30) m = 2;</code><br>Вариант 1: <code>if(++s&gt;59)m=2;</code> → <code>if(++s&gt;29)m=2;</code></p></details>
+<label class="done-box"><input type="checkbox" id="c-t7"> Сделано</label></div>
+
+<div class="task" data-id="t8"><header><h3>8. Убрать лишние нули</h3><span class="lvl">правка</span></header>
+<p>Сейчас 7 секунд выглядят как «0007». Сделай, чтобы было «&nbsp;&nbsp;&nbsp;7»: незначащие нули слева не горят.</p>
+<details><summary>Подсказка</summary><p>Код 0 означает «все сегменты погашены». После строки, где вычисляется <code>k</code>, добавь <code>if</code>, который в нужных случаях кладёт в <code>k</code> ноль. Разряд не нужен, если число меньше 1000 (для d = 0), меньше 100 (d = 1), меньше 10 (d = 2).</p></details>
+<details><summary>Ответ</summary><p>Вставь сразу после вычисления <code>k</code> в варианте 3:</p><pre class="cpp">if ((d == 0 &amp;&amp; n &lt; 1000) || (d == 1 &amp;&amp; n &lt; 100) || (d == 2 &amp;&amp; n &lt; 10)) k = 0;</pre><p>Разряд 4 (единицы) гасить нельзя, иначе ноль вообще не будет виден.</p></details>
+<label class="done-box"><input type="checkbox" id="c-t8"> Сделано</label></div>
+
+<div class="task" data-id="t9"><header><h3>9. Таймер обратного отсчёта</h3><span class="lvl">логика</span></header>
+<p>Переделай вариант 3 в таймер: после сброса на экране 60, по кнопке идёт отсчёт 59, 58 … 0, на нуле останавливается.</p>
+<details><summary>Подсказка</summary><p>Изменения в трёх местах: начальное значение <code>n</code>, что делает сброс, и строка счёта (вместо <code>++n</code> нужен <code>--n</code>, а остановка при нуле).</p></details>
+<details><summary>Ответ</summary><pre class="cpp">uint16_t n = 60;              // было: uint16_t n;
+
+// в обработке кнопки:
+      if (!m) n = 60;         // было: n = 0
+
+// счёт времени:
+  if (m == 1 &amp;&amp; millis() - t &gt;= 1000) {
+    t += 1000;
+    if (--n == 0) m = 2;      // было: if (++n &gt;= 60) m = 2;
+  }</pre></details>
+<label class="done-box"><input type="checkbox" id="c-t9"> Сделано</label></div>
+
+<div class="task" data-id="t10"><header><h3>10. Десятые доли секунды</h3><span class="lvl">логика</span></header>
+<p>Сделай секундомер с десятыми: формат «12.3», от 0.0 до 99.9. Точка горит постоянно после разряда 3, левый разряд погашен.</p>
+<details><summary>Подсказка</summary><p>Пусть <code>n</code> считает десятые доли, а не секунды. Тогда «тик» каждые 100 мс, предел 999. Точку зажигай только когда <code>d == 2</code>.</p></details>
+<details><summary>Ответ</summary><p>Замены в варианте 3:</p><pre class="cpp">// счёт: тик каждые 100 мс, стоп на 99.9
+  if (m == 1 &amp;&amp; millis() - t &gt;= 100) { t += 100; if (++n &gt;= 999) m = 2; }
+
+// после вычисления k: левый разряд погашен
+  if (d == 0) k = 0;
+
+// точка: только на разряде 3, всегда
+  digitalWrite(S[7], d == 2 ? LOW : HIGH);</pre><p>Число 123 (десятых) раскладывается так: разряд 2 = 1, разряд 3 = 2 с точкой, разряд 4 = 3. Получается «12.3».</p></details>
+<label class="done-box"><input type="checkbox" id="c-t10"> Сделано</label></div>
+
+<div class="task" data-id="t11"><header><h3>11. Найди ошибки</h3><span class="lvl">отладка</span></header>
+<p>В этом куске 4 ошибки. Одна не даст программе загрузиться, три остальные загрузятся, но схема будет работать неправильно. Найди все.</p>
+<pre class="cpp">const uint8_t S[8] = {6, 7, 8, A0, A1, A2, A3, A4}
+const uint8_t D[4] = {5, 4, 3, 2};
+
+void setup() {
+  for (uint8_t i = 0; i &lt; 7; i++) pinMode(S[i], OUTPUT);
+  for (uint8_t i = 0; i &lt; 4; i++) pinMode(D[i], OUTPUT);
+  pinMode(9, INPUT);
+}
+// ... в loop:
+  for (uint8_t s = 0; s &lt; 7; s++) digitalWrite(S[s], (k &gt;&gt; s &amp; 1) ? HIGH : LOW);</pre>
+<details><summary>Ответ</summary><ol class="steps">
+<li>Нет <code>;</code> после первого массива — ошибка компиляции.</li>
+<li><code>i &lt; 7</code> в первом цикле: пин точки <code>S[7]</code> не стал выходом, точка не будет работать. Нужно <code>i &lt; 8</code>.</li>
+<li><code>INPUT</code> вместо <code>INPUT_PULLUP</code>: пин кнопки «висит в воздухе», режимы будут переключаться сами.</li>
+<li><code>? HIGH : LOW</code> перепутано для общего анода: будут гореть все сегменты, <b>кроме</b> нужных.</li>
+</ol></details>
+<label class="done-box"><input type="checkbox" id="c-t11"> Сделано</label></div>
+
+<div class="task" data-id="t12"><header><h3>12. Финал: две кнопки</h3><span class="lvl">с нуля</span></header>
+<p>Добавь вторую кнопку на D10 (тоже к GND). Кнопка D9 — старт/пауза (можно продолжать после паузы), кнопка D10 — сброс в ноль. Напиши программу с нуля, подглядывая в вариант 3 только при необходимости.</p>
+<details><summary>Подсказка</summary><p>Вместо режима <code>m</code> удобнее <code>bool run</code>. Для каждой кнопки своя переменная прошлого состояния. Блок вывода на индикатор не меняется вообще.</p></details>
+<details><summary>Ответ</summary><pre class="cpp">const uint8_t S[8] = {6, 7, 8, A0, A1, A2, A3, A4};
+const uint8_t D[4] = {5, 4, 3, 2};
+const uint8_t F[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};
+
+uint8_t d, b1 = 1, b2 = 1;   // разряд и прошлые состояния двух кнопок
+bool run = false;            // идёт ли счёт
+uint16_t n;
+uint32_t t;
+
+void setup() {
+  for (uint8_t i = 0; i &lt; 8; i++) pinMode(S[i], OUTPUT);
+  for (uint8_t i = 0; i &lt; 4; i++) pinMode(D[i], OUTPUT);
+  pinMode(9, INPUT_PULLUP);
+  pinMode(10, INPUT_PULLUP);
+}
+
+void loop() {
+  uint8_t c = digitalRead(9);            // старт/пауза
+  if (c != b1) {
+    b1 = c; delay(20);
+    if (!c &amp;&amp; n &lt; 60) { run = !run; if (run) t = millis(); }
+  }
+  c = digitalRead(10);                   // сброс
+  if (c != b2) {
+    b2 = c; delay(20);
+    if (!c) { run = false; n = 0; }
+  }
+  if (run &amp;&amp; millis() - t &gt;= 1000) { t += 1000; if (++n &gt;= 60) run = false; }
+
+  digitalWrite(D[d], LOW);
+  d = (d + 1) &amp; 3;
+  uint8_t k = F[d == 0 ? n / 1000 : d == 1 ? n / 100 % 10 : d == 2 ? n / 10 % 10 : n % 10];
+  for (uint8_t s = 0; s &lt; 7; s++) digitalWrite(S[s], (k &gt;&gt; s &amp; 1) ? LOW : HIGH);
+  digitalWrite(S[7], (run &amp;&amp; millis() - t &lt; 500) ? LOW : HIGH);
+  digitalWrite(D[d], HIGH);
+  delay(4);
+}</pre><p>Упрощение: после паузы неполная секунда начинается заново. Если хочешь точности, сохраняй остаток <code>millis() - t</code> в момент паузы и вычитай его при продолжении — это задание со звёздочкой.</p></details>
+<label class="done-box"><input type="checkbox" id="c-t12"> Сделано</label></div>
+
+<h2 id="debug"><span class="n">11</span>Если не работает</h2>
+<div class="tbl"><table>
+<tr><th>Что видишь</th><th>Что проверить</th></tr>
+<tr><td>IDE пишет <i>expected ';'</i></td><td>Забыта точка с запятой в строке <b>выше</b> той, что подсвечена.</td></tr>
+<tr><td>IDE пишет <i>was not declared in this scope</i></td><td>Опечатка в имени (большие и маленькие буквы различаются: <code>digitalwrite</code> ≠ <code>digitalWrite</code>) или переменная не объявлена.</td></tr>
+<tr><td>Ошибка загрузки, порт недоступен</td><td>Выбран не тот порт или плата, кабель USB только для зарядки, порт занят другой программой.</td></tr>
+<tr><td>Горят все сегменты, кроме нужных</td><td>Индикатор с общим катодом, а код для общего анода. Поменяй местами <code>LOW</code> и <code>HIGH</code> во всех <code>digitalWrite</code> сегментов и разрядов.</td></tr>
+<tr><td>Цифры «кривые», не тот сегмент</td><td>Перепутан провод. Сверь каждую строку таблицы подключения; поправить можно и в коде, поменяв порядок чисел в массиве <code>S</code>.</td></tr>
+<tr><td>Цифры в разрядах перепутаны местами</td><td>Поменяй порядок чисел в массиве <code>D</code> (в вариантах 1 и 2 это зашито в формулу <code>5-c</code> / <code>13-c</code>).</td></tr>
+<tr><td>Индикатор мерцает</td><td>Слишком большой <code>delay</code> в <code>loop</code>. На четыре разряда больше 5 мс ставить не стоит.</td></tr>
+<tr><td>Режимы переключаются сами</td><td>Нет <code>INPUT_PULLUP</code>, или кнопка подключена не к GND.</td></tr>
+<tr><td>Одно нажатие срабатывает как два</td><td>Дребезг: увеличь паузу после изменения кнопки до 30–50 мс.</td></tr>
+</table></div>
+<p style="color:var(--muted);font-size:14px;margin-top:32px">Все примеры рассчитаны на Arduino Uno / Nano (ATmega328P). На других платах номера пинов A0–A5 могут отличаться.</p>
+</main>
+</div>
+
+<script>
+(function(){
+  // ---------- подсветка кода ----------
+  var re=/(\/\/.*$)|\b(const|byte|bool|void|for|if|else|unsigned|long|uint8_t|uint16_t|uint32_t|true|false)\b|\b(pinMode|digitalWrite|digitalRead|millis|delay|setup|loop)\b|\b(HIGH|LOW|OUTPUT|INPUT_PULLUP|INPUT|LED_BUILTIN|A[0-5])\b|(\b0x[0-9A-Fa-f]+\b|\b\d+\b)/gm;
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  document.querySelectorAll("pre.cpp").forEach(function(p){
+    var h=esc(p.textContent).replace(re,function(m,cm,kw,fn,cn,num){
+      if(cm)return '<span class="m">'+cm+'</span>';
+      if(kw)return '<span class="k">'+kw+'</span>';
+      if(fn)return '<span class="f">'+fn+'</span>';
+      if(cn)return '<span class="c">'+cn+'</span>';
+      return '<span class="u">'+num+'</span>';
+    });
+    p.innerHTML='<code>'+h+'</code>';
+  });
+
+  // ---------- рисование цифры ----------
+  var P={a:"14,4 50,4 54,8 50,12 14,12 10,8",b:"54,10 58,14 58,46 54,50 50,46 50,14",c:"54,50 58,54 58,86 54,90 50,86 50,54",d:"14,88 50,88 54,92 50,96 14,96 10,92",e:"10,50 14,54 14,86 10,90 6,86 6,54",f:"10,10 14,14 14,46 10,50 6,46 6,14",g:"14,46 50,46 54,50 50,54 14,54 10,50"};
+  var ORDER=["a","b","c","d","e","f","g"];
+  function digitSVG(svg){
+    var s='<g transform="skewX(-5) translate(6 0)">';
+    ORDER.forEach(function(k,i){s+='<polygon class="seg" data-i="'+i+'" points="'+P[k]+'"><title>сегмент '+k+'</title></polygon>'});
+    s+='<circle class="seg" data-i="7" cx="64" cy="92" r="4"><title>точка dp</title></circle></g>';
+    svg.innerHTML=s;
+    return Array.prototype.slice.call(svg.querySelectorAll(".seg"));
+  }
+  function paint(segs,code,dp){segs.forEach(function(el,i){el.classList.toggle("on",i<7?!!(code>>i&1):!!dp)})}
+  var F=[0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x6F];
+
+  // ---------- редактор сегментов ----------
+  var edSegs=digitSVG(document.getElementById("ed")), edCode=F[2], edDp=0;
+  var PINS=["D6","D7","D8","A0","A1","A2","A3","A4"], NAMES=["a","b","c","d","e","f","g","dp"];
+  function edRender(){
+    paint(edSegs,edCode,edDp);
+    document.getElementById("edDec").textContent=edCode;
+    document.getElementById("edHex").textContent="0x"+edCode.toString(16).toUpperCase().padStart(2,"0");
+    var b="";for(var i=6;i>=0;i--){var on=edCode>>i&1;b+='<div class="'+(on?"on":"")+'">'+NAMES[i]+'<b>'+on+'</b></div>'}
+    document.getElementById("edBits").innerHTML=b;
+    var lows=[];for(var j=0;j<8;j++){var lit=j<7?(edCode>>j&1):edDp;if(lit)lows.push(PINS[j])}
+    document.getElementById("edPins").textContent="В варианте 3 на LOW (горят): "+(lows.length?lows.join(", "):"ничего")+"; остальные сегменты HIGH.";
+  }
+  edSegs.forEach(function(el){el.addEventListener("click",function(){var i=+el.getAttribute("data-i");if(i===7)edDp^=1;else edCode^=1<<i;edRender()})});
+  var nums=document.getElementById("edNums");
+  F.forEach(function(c,i){var b=document.createElement("button");b.type="button";b.textContent=i;b.setAttribute("aria-label","Показать цифру "+i);b.onclick=function(){edCode=c;edDp=0;edRender()};nums.appendChild(b)});
+  document.getElementById("edClear").onclick=function(){edCode=0;edDp=0;edRender()};
+  edRender();
+
+  // ---------- модель секундомера (логика варианта 3) ----------
+  var box=document.getElementById("simDigits"), simSegs=[];
+  for(var i=0;i<4;i++){var sv=document.createElementNS("http://www.w3.org/2000/svg","svg");sv.setAttribute("viewBox","0 0 70 100");box.appendChild(sv);simSegs.push(digitSVG(sv))}
+  var caps=document.querySelectorAll("#simCap span");
+  var m=0,n=0,t=0,d=0,vnow=0,last=performance.now(),slow=false,speed=1,stepAcc=0;
+  function digitVal(dd){return dd===0?Math.floor(n/1000):dd===1?Math.floor(n/100)%10:dd===2?Math.floor(n/10)%10:n%10}
+  document.getElementById("simBtn").onclick=function(){m=(m+1)%3;if(m===1)t=vnow;if(!m)n=0};
+  var bs=document.getElementById("simSlow"),bf=document.getElementById("simFast");
+  bs.onclick=function(){slow=!slow;bs.setAttribute("aria-pressed",slow)};
+  bf.onclick=function(){speed=speed===1?10:1;bf.setAttribute("aria-pressed",speed===10)};
+  var MODES=["0 · сброс","1 · счёт","2 · стоп"];
+  function frame(now){
+    var dt=now-last;last=now;
+    var scale=(slow?0.01:1)*speed;
+    vnow+=dt*scale;
+    while(m===1&&vnow-t>=1000){t+=1000;if(++n>=60)m=2}
+    // один проход loop() = 4 мс модельного времени
+    stepAcc+=dt*scale;var steps=Math.floor(stepAcc/4);stepAcc-=steps*4;d=(d+steps)&3;
+    var dp=m===1&&vnow-t<500;
+    for(var i=0;i<4;i++){var show=!slow||i===d;paint(simSegs[i],show?F[digitVal(i)]:0,show&&dp);caps[i].classList.toggle("act",slow&&i===d)}
+    var k=F[digitVal(d)];
+    document.getElementById("vM").textContent=MODES[m];
+    document.getElementById("vN").textContent=n;
+    document.getElementById("vD").textContent=slow?d+" (пин D"+[5,4,3,2][d]+")":"меняется 250 раз/с";
+    document.getElementById("vK").textContent=slow?k+" = 0b"+k.toString(2).padStart(7,"0"):"—";
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- отметки заданий ----------
+  var store=null;try{store=window.localStorage;store.getItem("x")}catch(e){store=null}
+  var tasks=document.querySelectorAll(".task");
+  function upd(){var c=0;tasks.forEach(function(tk){var cb=tk.querySelector("input");tk.classList.toggle("done",cb.checked);if(cb.checked)c++});document.getElementById("progress").textContent="Сделано: "+c+" из "+tasks.length}
+  tasks.forEach(function(tk){var id=tk.getAttribute("data-id"),cb=tk.querySelector("input");
+    try{if(store&&store.getItem("ard-"+id)==="1")cb.checked=true}catch(e){}
+    cb.addEventListener("change",function(){try{if(store)store.setItem("ard-"+id,cb.checked?"1":"0")}catch(e){}upd()})});
+  upd();
+})();
+</script>
+</body>
+</html>
